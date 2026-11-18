@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "./auth-provider";
-import { Wordmark } from "./brand";
+import { Spinner, Wordmark } from "./brand";
 
 export function Logo({ className = "", sub = true }: { className?: string; sub?: boolean }) {
   return <Wordmark sub={sub} className={className} />;
@@ -19,6 +19,7 @@ export function SiteHeader() {
   const links = [
     { href: "/book", label: "Book a seat" },
     { href: "/rooms", label: "Rooms" },
+    { href: "/now", label: "Live now" },
     ...(user ? [{ href: "/me", label: "My bookings" }] : []),
     ...(profile?.role === "admin" ? [{ href: "/admin", label: "Admin" }] : []),
   ];
@@ -44,7 +45,7 @@ export function SiteHeader() {
         </nav>
         <div className="ml-auto flex items-center gap-2 md:ml-2">
           {!ready ? (
-            <span className="h-8 w-20 animate-pulse rounded-full bg-ink/5" />
+            <Spinner className="h-6 w-6" />
           ) : user ? (
             <div className="relative">
               <button
@@ -87,7 +88,7 @@ export function SiteHeader() {
           )}
         </div>
       </div>
-      <nav className="flex gap-1 overflow-x-auto px-4 pb-2 md:hidden">
+      <nav className="hidden">
         {links.map((l) => (
           <Link
             key={l.href}

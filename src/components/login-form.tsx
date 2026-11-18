@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser, supabaseConfigured } from "@/lib/supabase/client";
 import { useAuth } from "./auth-provider";
-import { CornerSpark, Wordmark } from "./brand";
+import { CornerSpark, Spinner, Wordmark } from "./brand";
 
 function nextPath() {
   if (typeof window === "undefined") return "/book";
@@ -78,7 +78,7 @@ export function LoginForm() {
                 value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
             </div>
             {error && <p className="text-sm text-red-700">{error}</p>}
-            <button className="btn-spark w-full" disabled={busy}>{busy ? "Sending…" : "Email me a code"}</button>
+            <button className="btn-spark w-full" disabled={busy}>{busy ? <><Spinner className="h-4 w-4 !text-ink" /> Sending…</> : "Email me a sign-in link"}</button>
             <p className="text-xs text-ink/50">
               Members: use the email the*spark team registered for you. Everyone else can book a day pass.
             </p>
@@ -92,7 +92,7 @@ export function LoginForm() {
                 value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} />
             </div>
             {error && <p className="text-sm text-red-700">{error}</p>}
-            <button className="btn-spark w-full" disabled={busy || code.length < 6}>{busy ? "Checking…" : "Sign in"}</button>
+            <button className="btn-spark w-full" disabled={busy || code.length < 6}>{busy ? <><Spinner className="h-4 w-4 !text-ink" /> Checking…</> : "Sign in"}</button>
             <button type="button" className="w-full text-xs text-ink/50 underline" onClick={() => { setStep("email"); setCode(""); }}>
               Use a different email
             </button>

@@ -4,9 +4,11 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "./auth-provider";
 import { Checkout } from "./checkout";
-import { DateStrip, LiveBadge, Sheet, Toast, useToast } from "./ui";
+import { announceHoldChange } from "./hold-timer";
+import { AddToCalendar } from "./calendar-actions";
+import { DateStrip, LiveBadge, Loader, Sheet, Toast, useToast } from "./ui";
 import { SeatLegend, SeatMap, seatStates } from "./seat-map";
-import { PageHeader, SparkMark } from "./brand";
+import { PageHeader, SparkMark, Spinner } from "./brand";
 import { useCatalog, useLiveOccupancy, useMounted, useUsage } from "@/lib/hooks";
 import { supabaseBrowser, supabaseConfigured } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/errors";
@@ -32,6 +34,23 @@ export function BookSeat() {
   useEffect(() => {
     if (days.length && !date) setDate(days[0].date);
   }, [days, date]);
+
+  // Came back mid-checkout? Pick up the seat still on hold (like BookMyShow).
+  useEffect(() => {
+    if (!user || !supabaseConfigured) return;
+    supabaseBrowser()
+      .from("bookings").select("*").eq("user_id", user.id).eq("status", "held")
+      .gt("hold_expires_at", new Date().toISOString())
+      .order("created_at", { ascending: false }).limit(1).maybeSingle()
+      .then(({ data }) => {
+        const b = data as Booking | null;
+        if (!b) return;
+        setDate(b.booking_date);
+        if (b.part) setPart(b.part);
+        setSelected(b.resource_id);
+        setHeld(b);
+      });
+  }, [user]);
 
   // my own bookings for the day (so the map can colour them "Yours")
   const loadMine = useCallback(async () => {
@@ -81,6 +100,7 @@ export function BookSeat() {
     setMyIds((prev) => new Set(prev).add(b.id));
     if (b.status === "held") {
       setHeld(b);
+      announceHoldChange();
     } else {
       setSelected(null);
       setDone(b);
@@ -89,10 +109,11 @@ export function BookSeat() {
   }
 
   async function releaseHold() {
-    if (held) await supabaseBrowser().rpc("cancel_booking", { p_id: held.id });
+    if (held) await supabaseBrowser().rpc("cancel_booking", { p_id: held.id }).then(() => {}, () => {});
     setHeld(null);
     setSelected(null);
     loadMine();
+    announceHoldChange();
   }
 
   if (!supabaseConfigured) return <NotConfigured />;
@@ -131,9 +152,7 @@ export function BookSeat() {
 
       <div className="mt-6">
         {!catalog || !date ? (
-          <div className="grid gap-4 lg:grid-cols-2">
-            {[0, 1, 2, 3].map((i) => <div key={i} className="card h-64 animate-pulse bg-ink/5" />)}
-          </div>
+          <Loader label="Loading the floor" className="py-24" />
         ) : (
           <SeatMap desks={desks} states={states} selected={selected} flash={flash} onSelect={(id) => { setSelected(id); setDone(null); }} />
         )}
@@ -152,6 +171,10 @@ export function BookSeat() {
                 {done.billing === "paid" && ` · paid`}
               </p>
             </div>
+            <div className="rounded-2xl bg-cream/70 p-3 text-left">
+              <p className="mb-2 text-[11px] uppercase tracking-[0.12em] text-ink/55">Add to your calendar · get reminders</p>
+              <AddToCalendar booking={done} resourceName={`Seat ${done.resource_id}`} />
+            </div>
             <div className="flex gap-2">
               <button className="btn-ghost flex-1" onClick={() => setDone(null)}>Book another</button>
               <Link href="/me" className="btn-ink flex-1">My bookings</Link>
@@ -160,12 +183,14 @@ export function BookSeat() {
         ) : held && selected ? (
           <Checkout
             booking={held}
+            holdMinutes={settings?.hold_minutes ?? 10}
             gstRate={Number(settings?.gst_rate ?? 18)}
             title={`Seat ${held.resource_id} · ${fmtDate(held.booking_date)} · ${partInfo.label}`}
             onPaid={(b) => {
               setHeld(null);
               setSelected(null);
               loadMine();
+              announceHoldChange();
               if (b.status === "confirmed") setDone(b);
               else show("Payment received, but the seat was released before it completed. We'll refund you in full.", "error");
             }}
@@ -200,13 +225,13 @@ export function BookSeat() {
                     )
                   ) : (
                     <p>
-                      {part === "full" ? "Day pass" : "Half-day pass"} <b>{inr(price)}</b> + GST. We&apos;ll hold the seat for {settings?.hold_minutes ?? 8} minutes while you pay.
+                      {part === "full" ? "Day pass" : "Half-day pass"} <b>{inr(price)}</b> + GST. Your seat is held for <b>{settings?.hold_minutes ?? 10} minutes</b> while you pay.
                       {profile?.role === "admin" && " (Staff accounts book as guests.)"}
                     </p>
                   )}
                 </div>
                 <button className="btn-spark w-full text-base" onClick={confirm} disabled={busy}>
-                  {busy ? "Booking…" : isMember ? "Confirm booking" : "Hold seat & pay"}
+                  {busy ? <><Spinner className="h-4 w-4 !text-ink" /> Booking…</> : isMember ? "Confirm booking" : "Hold seat & pay"}
                 </button>
               </>
             )}

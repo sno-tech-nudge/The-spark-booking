@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { useAuth } from "./auth-provider";
-import { DateStrip, LiveBadge, Sheet, Toast, useToast } from "./ui";
+import { DateStrip, LiveBadge, Loader, Sheet, Toast, useToast } from "./ui";
 import { NotConfigured } from "./book-seat";
-import { PageHeader, SparkMark } from "./brand";
+import { PageHeader, SparkMark, Spinner } from "./brand";
+import { AddToCalendar } from "./calendar-actions";
 import { useCatalog, useLiveOccupancy, useMounted, useUsage } from "@/lib/hooks";
 import { supabaseBrowser, supabaseConfigured } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/errors";
@@ -205,7 +206,7 @@ export function BookRoom() {
               </RoomGroup>
             ))}
             {!catalog && (
-              <tr><td colSpan={hourCols.length + 1} className="h-64 animate-pulse bg-ink/5" /></tr>
+              <tr><td colSpan={hourCols.length + 1}><Loader label="Loading rooms" /></td></tr>
             )}
           </tbody>
         </table>
@@ -227,6 +228,10 @@ export function BookRoom() {
                 {fmtDate(done.booking_date)}
                 {done.amount > 0 ? ` · ${inr(done.amount)} added to your next invoice` : " · no charge"}
               </p>
+            </div>
+            <div className="rounded-2xl bg-cream/70 p-3 text-left">
+              <p className="mb-2 text-[11px] uppercase tracking-[0.12em] text-ink/55">Add to your calendar · get reminders</p>
+              <AddToCalendar booking={done} resourceName={rooms.find((r) => r.id === done.resource_id)?.name ?? done.resource_id} />
             </div>
             <div className="flex gap-2">
               <button className="btn-ghost flex-1" onClick={() => setDone(null)}>Book another</button>
@@ -263,7 +268,7 @@ export function BookRoom() {
               <>
                 <p className="text-sm text-ink/70">{estimate?.text}</p>
                 <button className="btn-spark w-full text-base" onClick={confirm} disabled={busy || maxHours < sel.room.min_hours}>
-                  {busy ? "Booking…" : "Confirm booking"}
+                  {busy ? <><Spinner className="h-4 w-4 !text-ink" /> Booking…</> : "Confirm booking"}
                 </button>
               </>
             )}

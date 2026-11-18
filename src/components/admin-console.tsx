@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "./auth-provider";
-import { LiveBadge, Stat, Toast, useToast } from "./ui";
+import { LiveBadge, Loader, Stat, Toast, useToast } from "./ui";
 import { NotConfigured } from "./book-seat";
 import { PageHeader, Spinner } from "./brand";
 import { SeatLegend, SeatMap, seatStates } from "./seat-map";
@@ -171,7 +171,7 @@ function LiveTab({ show }: { show: ShowFn }) {
           <div className="card p-4">
             <p className="font-semibold">Today&apos;s bookings</p>
             <div className="mt-2 max-h-[560px] space-y-1 overflow-y-auto">
-              {rows === null ? <p className="text-sm text-ink/50">Loading…</p>
+              {rows === null ? <Loader className="py-8" />
                 : active.length === 0 ? <p className="text-sm text-ink/50">No bookings yet today.</p>
                 : active.map((b) => <BookingRow key={b.id} b={b} act={act} />)}
             </div>
@@ -262,7 +262,7 @@ function BookingsTab({ show }: { show: ShowFn }) {
           </thead>
           <tbody>
             {rows === null ? (
-              <tr><td colSpan={8} className="px-4 py-6 text-ink/50">Loading…</td></tr>
+              <tr><td colSpan={8}><Loader label="Loading bookings" className="py-10" /></td></tr>
             ) : list.length === 0 ? (
               <tr><td colSpan={8} className="px-4 py-6 text-ink/50">No bookings.</td></tr>
             ) : list.map((b) => (
@@ -396,7 +396,7 @@ function MembersTab({ show }: { show: ShowFn }) {
           </div>
         ) : <div />}
         <div className="md:col-span-6">
-          <button className="btn-spark" disabled={busy}>{busy ? "Adding…" : "Add member"}</button>
+          <button className="btn-spark" disabled={busy}>{busy ? <><Spinner className="h-4 w-4 !text-ink" /> Adding…</> : "Add member"}</button>
         </div>
       </form>
 
@@ -501,7 +501,7 @@ function PricingTab({ show }: { show: ShowFn }) {
     reload();
   }
 
-  if (!settings) return <p className="text-sm text-ink/50">Loading…</p>;
+  if (!settings) return <Loader label="Loading prices" />;
   const num = (v: string) => (v === "" ? 0 : Number(v));
 
   return (
@@ -595,7 +595,7 @@ function ReportsTab() {
     return out;
   }, [mounted]);
 
-  if (!rows) return <p className="text-sm text-ink/50">Loading…</p>;
+  if (!rows) return <Loader label="Crunching the numbers" />;
 
   const today = todayIST();
   const pastRows = rows.filter((b) => b.booking_date <= today);

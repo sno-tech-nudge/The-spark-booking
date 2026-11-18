@@ -3,9 +3,12 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "./auth-provider";
-import { Meter, Toast, useToast } from "./ui";
+import { Loader, Meter, Toast, useToast } from "./ui";
 import { NotConfigured } from "./book-seat";
-import { PageHeader } from "./brand";
+import { PageHeader, Spinner } from "./brand";
+import { AddToCalendar, CalendarSync } from "./calendar-actions";
+import { OngoingTicket } from "./now-board";
+import { InstallCard } from "./pwa";
 import { useCatalog, useMounted, useUsage } from "@/lib/hooks";
 import { supabaseBrowser, supabaseConfigured } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/errors";
@@ -59,7 +62,11 @@ export function MyBookings() {
     <div className="relative mx-auto max-w-5xl px-4 py-10">
       <PageHeader kicker="welcome back" title={`Hi${profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}`} sub={user?.email} />
 
-      <div className="mt-6 grid gap-4 md:grid-cols-3">
+      <div className="mt-6">
+        <OngoingTicket compact />
+      </div>
+
+      <div className="mt-4 grid gap-4 md:grid-cols-3">
         <div className="card p-5 md:col-span-2">
           {usage?.plan_id ? (
             <>
@@ -98,6 +105,11 @@ export function MyBookings() {
         <ProfileCard onSaved={() => { refreshProfile(); show("Profile saved"); }} />
       </div>
 
+      <div className="mt-4 grid gap-4 md:grid-cols-2">
+        <CalendarSync />
+        <InstallCard />
+      </div>
+
       <div className="mt-8 flex items-center justify-between">
         <div className="inline-flex rounded-full bg-ink/5 p-1 text-sm">
           {(["upcoming", "past"] as const).map((t) => (
@@ -112,7 +124,7 @@ export function MyBookings() {
 
       <div className="mt-4 space-y-2">
         {bookings === null ? (
-          [0, 1, 2].map((i) => <div key={i} className="card h-20 animate-pulse bg-ink/5" />)
+          <Loader label="Loading your bookings" />
         ) : list.length === 0 ? (
           <div className="card p-8 text-center text-sm text-ink/60">{tab === "upcoming" ? "No upcoming bookings." : "Nothing here yet."}</div>
         ) : (
@@ -133,6 +145,9 @@ export function MyBookings() {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <StatusChip b={b} />
+                  {tab === "upcoming" && b.status === "confirmed" && (
+                    <AddToCalendar compact booking={b} resourceName={b.kind === "desk" ? `Seat ${b.resource_id}` : nameOf(b.resource_id)} />
+                  )}
                   {tab === "upcoming" && b.status === "confirmed" && isToday && !b.checked_in_at && (
                     <button className="btn-ink !py-1.5 text-sm" onClick={() => act("check_in", b.id, "Checked in — welcome!")}>Check in</button>
                   )}
@@ -192,7 +207,7 @@ function ProfileCard({ onSaved }: { onSaved: () => void }) {
       <input className="field" placeholder="Full name" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
       <input className="field" placeholder="Phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
       <input className="field" placeholder="Organisation" value={form.organisation} onChange={(e) => setForm({ ...form, organisation: e.target.value })} />
-      <button className="btn-ghost w-full" disabled={busy}>{busy ? "Saving…" : "Save"}</button>
+      <button className="btn-ghost w-full" disabled={busy}>{busy ? <><Spinner className="h-4 w-4" /> Saving…</> : "Save"}</button>
     </form>
   );
 }

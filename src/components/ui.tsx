@@ -1,6 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Spinner } from "./brand";
+
+/** The rotating asterisk, centred, with an optional caption. Use for any loading state. */
+export function Loader({ label, className = "py-16" }: { label?: string; className?: string }) {
+  return (
+    <div className={`flex flex-col items-center justify-center gap-3 ${className}`} role="status" aria-live="polite">
+      <Spinner className="h-10 w-10" />
+      {label && <p className="text-[11px] uppercase tracking-[0.14em] text-ink/50">{label}</p>}
+    </div>
+  );
+}
 
 export function DateStrip({
   days, value, onChange,
@@ -12,7 +23,7 @@ export function DateStrip({
   return (
     <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
       {days.length === 0
-        ? Array.from({ length: 10 }).map((_, i) => <div key={i} className="h-[68px] w-14 shrink-0 animate-pulse rounded-2xl bg-ink/5" />)
+        ? <div className="flex h-[68px] w-full items-center justify-center"><Spinner className="h-6 w-6" /></div>
         : days.map((d, i) => {
             const active = d.date === value;
             return (

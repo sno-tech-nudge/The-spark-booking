@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { useAuth } from "./auth-provider";
+import { HoldTimer, useCountdown } from "./hold-timer";
+import { Spinner } from "./brand";
 import type { Booking } from "@/lib/types";
 import { inr } from "@/lib/time";
 
@@ -25,10 +27,11 @@ function loadRazorpay(): Promise<boolean> {
 
 /** Pays for a held seat. Collects (and saves) the visitor's details first. */
 export function Checkout({
-  booking, gstRate, title, onPaid, onCancel,
+  booking, gstRate, holdMinutes = 10, title, onPaid, onCancel,
 }: {
   booking: Booking;
   gstRate: number;
+  holdMinutes?: number;
   title: string;
   onPaid: (b: Booking) => void;
   onCancel: () => void;
@@ -39,16 +42,11 @@ export function Checkout({
   const [org, setOrg] = useState(profile?.organisation ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [left, setLeft] = useState(() => secondsLeft(booking.hold_expires_at));
-
-  useEffect(() => {
-    const t = setInterval(() => setLeft(secondsLeft(booking.hold_expires_at)), 1000);
-    return () => clearInterval(t);
-  }, [booking.hold_expires_at]);
+  const left = useCountdown(booking.hold_expires_at);
 
   const gst = Math.round((booking.amount * gstRate) / 100);
   const total = booking.amount + gst;
-  const expired = left <= 0;
+  const expired = left !== null && left <= 0;
 
   async function pay() {
     if (!name.trim() || !/^[+\d][\d\s-]{7,}$/.test(phone.trim())) {
@@ -119,15 +117,11 @@ export function Checkout({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between rounded-2xl bg-cream px-4 py-3">
-        <div>
-          <p className="text-xs text-ink/60">Seat held for you</p>
-          <p className="font-semibold">{title}</p>
-        </div>
-        <div className={`text-right font-mono text-lg font-semibold ${left < 60 ? "text-red-600" : ""}`}>
-          {expired ? "expired" : `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`}
-        </div>
+      <div>
+        <p className="text-[11px] uppercase tracking-[0.12em] text-ink/55">Seat held for you</p>
+        <p className="mt-1 text-lg font-medium">{title}</p>
       </div>
+      <HoldTimer expiresAt={booking.hold_expires_at} totalMinutes={holdMinutes} />
 
       {expired ? (
         <div className="space-y-3">
@@ -159,7 +153,7 @@ export function Checkout({
           <div className="flex gap-2">
             <button className="btn-ghost" onClick={onCancel} disabled={busy}>Release seat</button>
             <button className="btn-spark flex-1" onClick={pay} disabled={busy}>
-              {busy ? "Processing…" : `Pay ${inr(total)}`}
+              {busy ? <><Spinner className="h-4 w-4 !text-ink" /> Processing…</> : `Pay ${inr(total)}`}
             </button>
           </div>
         </>
@@ -168,7 +162,3 @@ export function Checkout({
   );
 }
 
-function secondsLeft(iso: string | null) {
-  if (!iso) return 0;
-  return Math.max(0, Math.floor((new Date(iso).getTime() - Date.now()) / 1000));
-}

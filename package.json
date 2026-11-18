@@ -11,7 +11,8 @@
     "db:setup": "tsx scripts/db-setup.ts",
     "test:race": "tsx scripts/race-test.ts",
     "demo:login": "tsx scripts/demo-login.ts",
-    "test:race:api": "tsx scripts/race-api.ts"
+    "test:race:api": "tsx scripts/race-api.ts",
+    "icons": "node scripts/make-icons.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

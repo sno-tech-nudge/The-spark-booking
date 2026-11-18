@@ -1,16 +1,30 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Montserrat } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/auth-provider";
 import { SiteHeader } from "@/components/site-header";
 import { SetupBanner } from "@/components/setup-banner";
 import { Wordmark } from "@/components/brand";
+import { HoldBanner } from "@/components/hold-timer";
+import { TabBar } from "@/components/tab-bar";
+import { PwaSetup } from "@/components/pwa";
 
 const montserrat = Montserrat({ variable: "--font-montserrat", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "the*spark Pullur Centre — book a seat",
   description: "Live seat and room booking for the*spark Pullur Centre, Whitefield.",
+  applicationName: "the*spark",
+  appleWebApp: { capable: true, title: "the*spark", statusBarStyle: "default" },
+  icons: { apple: "/icons/apple-touch-icon.png" },
+  formatDetection: { telephone: false },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#f9f1e8",
+  viewportFit: "cover",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -20,6 +34,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <AuthProvider>
           <SetupBanner />
           <SiteHeader />
+          <HoldBanner />
           <main className="flex-1">{children}</main>
           <footer className="border-t border-paper/10 bg-ink text-paper/60">
             <div className="mx-auto flex max-w-6xl flex-wrap items-end justify-between gap-6 px-4 py-10 text-xs">
@@ -34,6 +49,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               </div>
             </div>
           </footer>
+          <TabBar />
+          <PwaSetup />
         </AuthProvider>
       </body>
     </html>
