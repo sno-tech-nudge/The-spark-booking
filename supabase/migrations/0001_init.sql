@@ -625,6 +625,7 @@ language plpgsql security definer set search_path = public as $$
 declare
   v_row public.bookings;
   s public.settings;
+  v_pay_status text;
 begin
   select * into s from public.settings;
   select * into v_row from public.bookings where id = p_id for update;
@@ -637,17 +638,21 @@ begin
            payment_ref = p_payment_id, updated_at = now()
      where id = p_id
     returning * into v_row;
-    insert into public.payments (booking_id, user_id, provider, order_id, payment_id, amount, gst_amount, status)
-    values (p_id, v_row.user_id, p_provider, p_order_id, p_payment_id, v_row.amount,
-            round(v_row.amount * s.gst_rate / 100), 'captured');
+    v_pay_status := 'captured';
   exception when exclusion_violation then
     -- hold had lapsed and someone else took the seat: flag for refund
     update public.bookings set billing = 'refund_due', payment_ref = p_payment_id, updated_at = now()
      where id = p_id returning * into v_row;
+    v_pay_status := 'refund_due';
+  end;
+
+  update public.payments set status = v_pay_status, payment_id = p_payment_id
+   where booking_id = p_id and order_id = p_order_id;
+  if not found then
     insert into public.payments (booking_id, user_id, provider, order_id, payment_id, amount, gst_amount, status)
     values (p_id, v_row.user_id, p_provider, p_order_id, p_payment_id, v_row.amount,
-            round(v_row.amount * s.gst_rate / 100), 'refund_due');
-  end;
+            round(v_row.amount * s.gst_rate / 100), v_pay_status);
+  end if;
   return v_row;
 end $$;
 
