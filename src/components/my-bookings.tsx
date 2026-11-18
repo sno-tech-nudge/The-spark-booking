@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "./auth-provider";
 import { Meter, Toast, useToast } from "./ui";
 import { NotConfigured } from "./book-seat";
+import { PageHeader } from "./brand";
 import { useCatalog, useMounted, useUsage } from "@/lib/hooks";
 import { supabaseBrowser, supabaseConfigured } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/errors";
@@ -41,7 +42,7 @@ export function MyBookings() {
   if (ready && !user) {
     return (
       <div className="mx-auto max-w-md px-4 py-24 text-center">
-        <h1 className="text-xl font-semibold">Sign in to see your bookings</h1>
+        <h1 className="text-xl font-light uppercase">Sign in to see your bookings</h1>
         <Link href="/login?next=/me" className="btn-spark mt-4">Sign in</Link>
       </div>
     );
@@ -55,9 +56,8 @@ export function MyBookings() {
   const list = tab === "upcoming" ? upcoming : past;
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8">
-      <h1 className="text-2xl font-semibold sm:text-3xl">Hi{profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}</h1>
-      <p className="mt-1 text-sm text-ink/60">{user?.email}</p>
+    <div className="relative mx-auto max-w-5xl px-4 py-10">
+      <PageHeader kicker="welcome back" title={`Hi${profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}`} sub={user?.email} />
 
       <div className="mt-6 grid gap-4 md:grid-cols-3">
         <div className="card p-5 md:col-span-2">
@@ -65,7 +65,7 @@ export function MyBookings() {
             <>
               <div className="flex items-baseline justify-between">
                 <p className="font-semibold">{usage.plan_name}</p>
-                <span className="chip bg-free/15 text-free">Active</span>
+                <span className="chip bg-spark text-ink">Active</span>
               </div>
               {usage.assigned_seat_id && <p className="mt-1 text-sm text-ink/60">Your fixed desk: <b>{usage.assigned_seat_id}</b></p>}
               <div className="mt-4 grid gap-5 sm:grid-cols-2">
@@ -161,11 +161,11 @@ function StatusChip({ b }: { b: Booking }) {
   if (b.status === "expired") return <span className="chip bg-ink/10 text-ink/60">{b.billing === "refund_due" ? "Refund due" : "Hold expired"}</span>;
   if (b.status === "held") return <span className="chip bg-held/40">Awaiting payment</span>;
   if (b.checked_out_at) return <span className="chip bg-ink/10">Checked out</span>;
-  if (b.checked_in_at) return <span className="chip bg-free/15 text-free">Checked in</span>;
+  if (b.checked_in_at) return <span className="chip bg-ink text-spark">Checked in</span>;
   const billing: Record<string, string> = {
     included: "Included", overage: `Overage ${inr(b.amount)}`, free: "Free", paid: `Paid ${inr(b.amount)}`,
   };
-  return <span className={`chip ${b.billing === "overage" ? "bg-spark/30" : "bg-free/15 text-free"}`}>{billing[b.billing] ?? "Confirmed"}</span>;
+  return <span className={`chip ${b.billing === "overage" ? "bg-spark-light text-ink" : "bg-spark-pale text-spark-dark"}`}>{billing[b.billing] ?? "Confirmed"}</span>;
 }
 
 function ProfileCard({ onSaved }: { onSaved: () => void }) {

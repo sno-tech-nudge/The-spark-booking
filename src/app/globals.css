@@ -1,62 +1,155 @@
 @import "tailwindcss";
 
+/* the*spark standard deck palette */
 @theme {
-  --color-spark: #ffa927;
-  --color-spark-dark: #e8890a;
+  --color-spark: #ffa927;        /* primary orange */
+  --color-spark-dark: #f4932e;   /* deep tint */
+  --color-spark-soft: #f5b35d;
+  --color-spark-light: #ffe599;  /* yellow tint */
+  --color-spark-pale: #fff2cc;
+  --color-paper: #f9f1e8;        /* cream background */
+  --color-cream: #f2e5d4;
+  --color-sand: #e2d0b5;
   --color-ink: #101010;
-  --color-paper: #fffaf3;
-  --color-cream: #f6ecdf;
-  --color-free: #2f9e5b;
-  --color-held: #f2c14e;
+  --color-graphite: #424548;
+  --color-stone: #6e7475;
+  --color-mist: #c2bfba;
+  /* semantic aliases used across components */
+  --color-free: #c9780c;         /* success / available accent, on-brand amber */
+  --color-held: #ffe599;
   --font-sans: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: Georgia, "Times New Roman", serif;
 }
 
 body {
   background: var(--color-paper);
   color: var(--color-ink);
+  font-weight: 400;
+}
+
+::selection {
+  background: var(--color-spark-light);
 }
 
 @layer components {
   .btn-spark {
-    @apply inline-flex items-center justify-center gap-2 rounded-full bg-spark px-5 py-2.5 font-medium text-ink transition hover:bg-spark-dark disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-spark px-5 py-2.5 font-medium text-ink transition hover:bg-spark-dark active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
   }
   .btn-ink {
-    @apply inline-flex items-center justify-center gap-2 rounded-full bg-ink px-5 py-2.5 font-medium text-paper transition hover:bg-ink/85 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-ink px-5 py-2.5 font-medium text-paper transition hover:bg-graphite active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
   }
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-full border border-ink/15 px-4 py-2 text-sm text-ink transition hover:bg-ink/5 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-ink/20 bg-transparent px-4 py-2 text-sm text-ink transition hover:border-ink hover:bg-white/60 disabled:cursor-not-allowed disabled:opacity-50;
   }
   .card {
-    @apply rounded-3xl border border-ink/10 bg-white;
+    @apply relative rounded-2xl border border-sand/70 bg-white/80;
   }
   .field {
-    @apply w-full rounded-xl border border-ink/15 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-spark focus:ring-2 focus:ring-spark/30;
+    @apply w-full rounded-xl border border-sand bg-white px-3 py-2.5 text-sm outline-none transition focus:border-spark focus:ring-2 focus:ring-spark/30;
   }
   .label {
-    @apply mb-1 block text-xs font-medium text-ink/60;
+    @apply mb-1 block text-[11px] font-medium uppercase tracking-[0.1em] text-ink/55;
   }
   .chip {
     @apply rounded-full px-2 py-0.5 text-[11px] font-medium;
   }
+  /* deck table: orange header row, hairline rows */
+  .brand-table thead tr {
+    @apply bg-spark text-ink;
+  }
+  .brand-table thead th {
+    @apply text-[11px] font-medium uppercase tracking-[0.08em] text-ink;
+  }
+  .brand-table tbody tr {
+    @apply border-t border-sand/60;
+  }
 }
 
 .hatch {
-  background-image: repeating-linear-gradient(45deg, rgba(16, 16, 16, 0.12) 0 3px, transparent 3px 7px);
+  background-image: repeating-linear-gradient(45deg, rgba(16, 16, 16, 0.1) 0 3px, transparent 3px 7px);
 }
 
+/* live indicator */
 @keyframes pulse-ring {
-  0% { box-shadow: 0 0 0 0 rgba(47, 158, 91, 0.5); }
-  100% { box-shadow: 0 0 0 8px rgba(47, 158, 91, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(255, 169, 39, 0.6); }
+  100% { box-shadow: 0 0 0 8px rgba(255, 169, 39, 0); }
 }
 .live-dot {
   animation: pulse-ring 1.6s ease-out infinite;
 }
 
+/* a seat that just changed for someone else */
 @keyframes pop {
   0% { transform: scale(1); }
-  40% { transform: scale(1.25); }
+  40% { transform: scale(1.25); box-shadow: 0 0 0 4px rgba(255, 169, 39, 0.35); }
   100% { transform: scale(1); }
 }
 .seat-pop {
-  animation: pop 0.45s ease-out;
+  animation: pop 0.5s ease-out;
+}
+
+/* spinner: the asterisk turning */
+@keyframes spark-spin {
+  to { transform: rotate(360deg); }
+}
+.spark-spin {
+  animation: spark-spin 1.4s cubic-bezier(0.5, 0.1, 0.5, 0.9) infinite;
+}
+
+/*
+ * Logo animation, after "The Spark Pullur Logo Animation":
+ * the asterisk springs up from the lower left in an arc, tumbles down,
+ * and settles between "the" and "spark" while the words grow in.
+ */
+@keyframes logo-spark-fly {
+  0%   { transform: translate(-5.5em, 2.6em) scale(0.35) rotate(0deg); opacity: 0; }
+  8%   { opacity: 1; }
+  38%  { transform: translate(-1.2em, -2.1em) scale(1.25) rotate(160deg); }
+  62%  { transform: translate(0.15em, -0.1em) scale(0.75) rotate(300deg); }
+  78%  { transform: translate(0, -0.42em) scale(1.08) rotate(350deg); }
+  100% { transform: translate(0, -0.3em) scale(1) rotate(360deg); opacity: 1; }
+}
+@keyframes logo-word-in {
+  0%, 55% { opacity: 0; transform: scale(0.55); }
+  100%    { opacity: 1; transform: scale(1); }
+}
+@keyframes logo-sub-in {
+  0%, 70% { opacity: 0; transform: translateY(0.4em); }
+  100%    { opacity: 1; transform: translateY(0); }
+}
+.logo-spark {
+  transform: translateY(-0.3em);
+}
+.logo-anim .logo-text {
+  animation: logo-word-in 1.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.logo-anim .logo-spark {
+  animation: logo-spark-fly 1.9s cubic-bezier(0.3, 0.7, 0.3, 1) both;
+}
+.logo-anim .logo-sub {
+  animation: logo-sub-in 2.3s ease-out both;
+}
+
+/* gentle entrance for page content */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+.rise {
+  animation: rise 0.6s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo-anim .logo-text,
+  .logo-anim .logo-spark,
+  .logo-anim .logo-sub,
+  .rise,
+  .seat-pop,
+  .spark-spin,
+  .live-dot {
+    animation: none !important;
+  }
+  .logo-anim .logo-spark {
+    transform: translateY(-0.3em);
+  }
 }

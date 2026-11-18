@@ -20,11 +20,11 @@ export function DateStrip({
                 key={d.date}
                 onClick={() => onChange(d.date)}
                 className={`flex w-14 shrink-0 flex-col items-center rounded-2xl border py-2 transition ${
-                  active ? "border-ink bg-ink text-paper" : "border-ink/10 bg-white hover:border-ink/40"
+                  active ? "border-ink bg-ink text-paper shadow-md" : "border-sand bg-white/80 hover:border-spark"
                 }`}
               >
                 <span className={`text-[10px] uppercase ${active ? "text-spark" : "text-ink/50"}`}>{i === 0 ? "Today" : d.dow}</span>
-                <span className="text-lg font-semibold leading-tight">{d.day}</span>
+                <span className="text-xl font-light leading-tight">{d.day}</span>
                 <span className="text-[10px] opacity-60">{d.month}</span>
               </button>
             );
@@ -35,7 +35,7 @@ export function DateStrip({
 
 export function LiveBadge({ state }: { state: "connecting" | "live" | "offline" }) {
   const map = {
-    live: { dot: "bg-free live-dot", text: "Live — updates instantly" },
+    live: { dot: "bg-spark live-dot", text: "Live — updates instantly" },
     connecting: { dot: "bg-held", text: "Connecting…" },
     offline: { dot: "bg-red-500", text: "Reconnecting…" },
   }[state];
@@ -94,8 +94,8 @@ export function Toast({ toast }: { toast: ToastT }) {
 export function Stat({ label, value, sub }: { label: string; value: React.ReactNode; sub?: React.ReactNode }) {
   return (
     <div className="card p-4">
-      <p className="text-xs text-ink/50">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
+      <p className="text-[10px] uppercase tracking-[0.12em] text-ink/55">{label}</p>
+      <p className="mt-2 text-3xl font-light tabular-nums">{value}</p>
       {sub && <p className="mt-0.5 text-xs text-ink/50">{sub}</p>}
     </div>
   );

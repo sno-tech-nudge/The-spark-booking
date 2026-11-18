@@ -6,13 +6,13 @@ import { partsOverlap } from "@/lib/time";
 export type SeatState = "free" | "held" | "booked" | "blocked" | "assigned" | "mine" | "my-seat";
 
 export const SEAT_STYLES: Record<SeatState, { cls: string; label: string }> = {
-  free: { cls: "bg-white border-free/60 text-ink hover:bg-free hover:text-white hover:border-free", label: "Available" },
-  held: { cls: "bg-held/70 border-held text-ink/70 cursor-not-allowed", label: "Being booked" },
-  booked: { cls: "bg-ink/15 border-transparent text-ink/40 cursor-not-allowed", label: "Booked" },
-  blocked: { cls: "hatch bg-ink/5 border-ink/10 text-ink/30 cursor-not-allowed", label: "Unavailable" },
-  assigned: { cls: "bg-ink border-ink text-paper/70 cursor-not-allowed", label: "Fixed desk" },
+  free: { cls: "bg-white border-sand text-ink hover:-translate-y-0.5 hover:border-spark hover:bg-spark-pale hover:shadow-sm", label: "Available" },
+  held: { cls: "bg-spark-light border-spark-light text-ink/55 cursor-not-allowed", label: "Being booked" },
+  booked: { cls: "bg-mist border-mist text-ink/40 cursor-not-allowed", label: "Booked" },
+  blocked: { cls: "hatch bg-cream border-sand text-ink/30 cursor-not-allowed", label: "Unavailable" },
+  assigned: { cls: "bg-graphite border-graphite text-paper/70 cursor-not-allowed", label: "Fixed desk" },
   mine: { cls: "bg-spark border-spark-dark text-ink", label: "Yours" },
-  "my-seat": { cls: "bg-spark/40 border-spark-dark text-ink hover:bg-spark", label: "Your fixed desk" },
+  "my-seat": { cls: "bg-spark-soft/50 border-spark-dark text-ink hover:bg-spark", label: "Your fixed desk" },
 };
 
 export function seatStates(
@@ -88,8 +88,8 @@ export function SeatMap({ desks, states, selected, flash, onSelect, labelFor }: 
         }).length;
         return (
           <section key={zone} className="card p-4 sm:p-5">
-            <div className="mb-3 flex items-baseline justify-between">
-              <h3 className="font-semibold">Zone {zone}</h3>
+            <div className="mb-4 flex items-baseline justify-between">
+              <h3 className="text-sm font-normal uppercase tracking-[0.14em]">Zone <span className="font-medium text-spark-dark">{zone}</span></h3>
               <span className="text-xs text-ink/50">
                 {free} of {all.length} free
               </span>
@@ -101,7 +101,7 @@ export function SeatMap({ desks, states, selected, flash, onSelect, labelFor }: 
                 return (
                   <div key={t} className="flex flex-col items-stretch gap-1">
                     <SeatRow seats={top} states={states} selected={selected} flash={flash} onSelect={onSelect} labelFor={labelFor} />
-                    <div className="mx-1 h-3 rounded-md bg-cream" title={`Table ${zone}${t}`} />
+                    <div className="mx-1 h-3 rounded-full bg-cream ring-1 ring-sand/60" title={`Table ${zone}${t}`} />
                     <SeatRow seats={bottom} states={states} selected={selected} flash={flash} onSelect={onSelect} labelFor={labelFor} />
                   </div>
                 );
@@ -134,7 +134,7 @@ function SeatRow({
             title={`${d.id} · ${SEAT_STYLES[s].label}${extra ? ` · ${extra}` : ""}`}
             aria-label={`Seat ${d.id}, ${SEAT_STYLES[s].label}`}
             className={`relative h-9 rounded-lg border text-[11px] font-semibold transition-all duration-200 ${SEAT_STYLES[s].cls} ${
-              isSel ? "!border-ink !bg-ink !text-spark ring-2 ring-spark ring-offset-1 scale-105" : ""
+              isSel ? "!border-ink !bg-ink !text-spark ring-2 ring-spark ring-offset-2 ring-offset-white scale-110" : ""
             } ${flash?.has(d.id) ? "seat-pop" : ""}`}
           >
             {num}

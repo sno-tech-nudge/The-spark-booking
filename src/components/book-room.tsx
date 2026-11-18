@@ -5,6 +5,7 @@ import { useMemo, useState, useEffect, useCallback } from "react";
 import { useAuth } from "./auth-provider";
 import { DateStrip, LiveBadge, Sheet, Toast, useToast } from "./ui";
 import { NotConfigured } from "./book-seat";
+import { PageHeader, SparkMark } from "./brand";
 import { useCatalog, useLiveOccupancy, useMounted, useUsage } from "@/lib/hooks";
 import { supabaseBrowser, supabaseConfigured } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/errors";
@@ -139,18 +140,15 @@ export function BookRoom() {
     .filter((g) => g.rooms.length);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold sm:text-3xl">Rooms & booths</h1>
-          <p className="mt-1 text-sm text-ink/60">
-            {usage?.plan_id
-              ? `${usage.plan_name}: ${Math.max(Number(usage.room_hours_included ?? 0) - Number(usage.room_hours_used), 0)} plan hours left this month · bookable ${fmtHour(open)}–${fmtHour(close)}`
-              : "Members only. Day passes don't include room access."}
-          </p>
-        </div>
-        <LiveBadge state={live} />
-      </div>
+    <div className="relative mx-auto max-w-6xl px-4 py-10">
+      <PageHeader
+        kicker="designed for gathering"
+        title="Rooms & booths"
+        sub={usage?.plan_id
+          ? `${usage.plan_name}: ${Math.max(Number(usage.room_hours_included ?? 0) - Number(usage.room_hours_used), 0)} plan hours left this month · bookable ${fmtHour(open)}–${fmtHour(close)}`
+          : "Members only. Day passes don't include room access."}
+        right={<LiveBadge state={live} />}
+      />
 
       <div className="mt-6">
         <DateStrip days={days} value={date} onChange={(d) => { setDate(d); setSel(null); }} />
@@ -194,9 +192,9 @@ export function BookRoom() {
                               selected ? "border-ink bg-ink"
                               : t === "mine" ? "border-spark-dark bg-spark"
                               : t === "blocked" ? "hatch border-transparent bg-ink/5"
-                              : t ? "border-transparent bg-ink/15"
+                              : t ? "border-transparent bg-mist"
                               : outside || past ? "hatch border-transparent bg-transparent"
-                              : "border-free/40 bg-white hover:border-free hover:bg-free/20"
+                              : "border-sand bg-white hover:border-spark hover:bg-spark-pale"
                             }`}
                           />
                         </td>
@@ -213,8 +211,8 @@ export function BookRoom() {
         </table>
       </div>
       <div className="mt-3 flex flex-wrap gap-4 text-xs text-ink/60">
-        <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded border border-free/40 bg-white" /> Free</span>
-        <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-ink/15" /> Booked</span>
+        <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded border border-sand bg-white" /> Free</span>
+        <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-mist" /> Booked</span>
         <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-spark" /> Yours</span>
         <span className="inline-flex items-center gap-1.5"><span className="hatch h-3 w-3 rounded" /> Closed / outside your plan&apos;s hours</span>
       </div>
@@ -222,7 +220,7 @@ export function BookRoom() {
       <Sheet open={Boolean(sel) || Boolean(done)} onClose={() => { if (!busy) { setSel(null); setDone(null); } }}>
         {done ? (
           <div className="space-y-4 text-center">
-            <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-free text-2xl text-white">✓</div>
+            <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-spark"><SparkMark className="h-8 w-8 text-white seat-pop" /></div>
             <div>
               <p className="text-lg font-semibold">{rooms.find((r) => r.id === done.resource_id)?.name} booked</p>
               <p className="text-sm text-ink/60">
@@ -281,7 +279,7 @@ function RoomGroup({ label, cols, children }: { label: string; cols: number; chi
   return (
     <>
       <tr>
-        <td colSpan={cols} className="bg-cream/60 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink/50">{label}</td>
+        <td colSpan={cols} className="bg-spark px-4 py-1.5 text-[11px] font-medium uppercase tracking-[0.12em] text-ink">{label}</td>
       </tr>
       {children}
     </>

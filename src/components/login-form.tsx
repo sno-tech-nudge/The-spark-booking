@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser, supabaseConfigured } from "@/lib/supabase/client";
 import { useAuth } from "./auth-provider";
-import { Logo } from "./site-header";
+import { CornerSpark, Wordmark } from "./brand";
 
 function nextPath() {
   if (typeof window === "undefined") return "/book";
@@ -56,14 +56,16 @@ export function LoginForm() {
   }
 
   return (
-    <div className="mx-auto flex max-w-md flex-col px-4 py-16">
-      <div className="card p-8">
-        <Logo className="text-2xl" />
-        <h1 className="mt-6 text-xl font-semibold">{step === "email" ? "Sign in or sign up" : "Check your email"}</h1>
-        <p className="mt-1 text-sm text-ink/60">
+    <div className="mx-auto flex max-w-md flex-col items-center px-4 py-14">
+      <span className="text-5xl"><Wordmark sub animated /></span>
+      <div className="card mt-10 w-full p-8">
+        <CornerSpark />
+        <p className="font-serif text-sm italic text-spark-dark">{step === "email" ? "welcome" : "almost in"}</p>
+        <h1 className="mt-1 text-2xl font-light uppercase">{step === "email" ? "Sign in or sign up" : "Check your email"}</h1>
+        <p className="mt-2 text-sm text-ink/60">
           {step === "email"
-            ? "No password needed. We'll email you a sign-in code."
-            : <>We sent a code and a sign-in link to <b>{email}</b>. Enter the code, or just tap the link.</>}
+            ? "No password needed — we'll email you a sign-in link."
+            : <>We sent a sign-in link to <b>{email}</b>. Tap it to continue, or enter the code if your email shows one.</>}
         </p>
 
         {!supabaseConfigured ? (

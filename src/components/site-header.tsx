@@ -4,13 +4,10 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "./auth-provider";
+import { Wordmark } from "./brand";
 
-export function Logo({ className = "" }: { className?: string }) {
-  return (
-    <span className={`font-medium tracking-tight text-ink ${className}`}>
-      the<span className="text-spark">*</span>spark <span className="text-spark">centre</span>
-    </span>
-  );
+export function Logo({ className = "", sub = true }: { className?: string; sub?: boolean }) {
+  return <Wordmark sub={sub} className={className} />;
 }
 
 export function SiteHeader() {
@@ -27,9 +24,9 @@ export function SiteHeader() {
   ];
 
   return (
-    <header className="sticky top-0 z-40 border-b border-ink/10 bg-paper/90 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-sand/70 bg-paper/85 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4">
-        <Link href="/" className="text-xl">
+        <Link href="/" className="text-[26px]" aria-label="the*spark Pullur Centre — home">
           <Logo />
         </Link>
         <nav className="ml-auto hidden items-center gap-1 md:flex">
@@ -37,8 +34,8 @@ export function SiteHeader() {
             <Link
               key={l.href}
               href={l.href}
-              className={`rounded-full px-3 py-1.5 text-sm transition ${
-                path.startsWith(l.href) ? "bg-ink text-paper" : "text-ink/70 hover:bg-ink/5 hover:text-ink"
+              className={`rounded-full px-3.5 py-1.5 text-[13px] transition ${
+                path.startsWith(l.href) ? "bg-ink text-paper" : "text-ink/70 hover:bg-white/70 hover:text-ink"
               }`}
             >
               {l.label}

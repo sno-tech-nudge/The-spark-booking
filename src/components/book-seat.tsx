@@ -6,6 +6,7 @@ import { useAuth } from "./auth-provider";
 import { Checkout } from "./checkout";
 import { DateStrip, LiveBadge, Sheet, Toast, useToast } from "./ui";
 import { SeatLegend, SeatMap, seatStates } from "./seat-map";
+import { PageHeader, SparkMark } from "./brand";
 import { useCatalog, useLiveOccupancy, useMounted, useUsage } from "@/lib/hooks";
 import { supabaseBrowser, supabaseConfigured } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/errors";
@@ -97,16 +98,13 @@ export function BookSeat() {
   if (!supabaseConfigured) return <NotConfigured />;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold sm:text-3xl">Pick your seat</h1>
-          <p className="mt-1 text-sm text-ink/60">
-            127 open-plan seats · {isMember ? `${usage?.plan_name} member` : `Day pass ${inr(settings?.day_pass_price ?? 500)} · half day ${inr(settings?.half_day_price ?? 300)}`}
-          </p>
-        </div>
-        <LiveBadge state={live} />
-      </div>
+    <div className="relative mx-auto max-w-6xl px-4 py-10">
+      <PageHeader
+        kicker="flexibility, by design"
+        title="Pick your seat"
+        sub={<>127 open-plan seats · {isMember ? `${usage?.plan_name} member` : `Day pass ${inr(settings?.day_pass_price ?? 500)} · half day ${inr(settings?.half_day_price ?? 300)}`}</>}
+        right={<LiveBadge state={live} />}
+      />
 
       <div className="mt-6 space-y-4">
         <DateStrip days={days} value={date} onChange={(d) => { setDate(d); setSelected(null); }} />
@@ -124,7 +122,7 @@ export function BookSeat() {
             ))}
           </div>
           <p className="text-sm">
-            <span className="text-2xl font-semibold tabular-nums">{catalog ? freeCount : "—"}</span>
+            <span className="text-3xl font-light tabular-nums">{catalog ? freeCount : "—"}</span>
             <span className="text-ink/60"> seats free</span>
           </p>
         </div>
@@ -145,7 +143,7 @@ export function BookSeat() {
       <Sheet open={Boolean(selected) || Boolean(done)} onClose={() => { if (!held && !busy) { setSelected(null); setDone(null); } }}>
         {done ? (
           <div className="space-y-4 text-center">
-            <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-free text-2xl text-white">✓</div>
+            <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-spark"><SparkMark className="h-8 w-8 text-white seat-pop" /></div>
             <div>
               <p className="text-lg font-semibold">Seat {done.resource_id} is yours</p>
               <p className="text-sm text-ink/60">
@@ -223,7 +221,7 @@ export function BookSeat() {
 export function NotConfigured() {
   return (
     <div className="mx-auto max-w-xl px-4 py-24 text-center">
-      <h1 className="text-2xl font-semibold">Almost there</h1>
+      <h1 className="text-2xl font-light uppercase">Almost there</h1>
       <p className="mt-2 text-ink/60">Connect a Supabase project to start booking. The README has the steps.</p>
     </div>
   );

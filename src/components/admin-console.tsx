@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "./auth-provider";
 import { LiveBadge, Stat, Toast, useToast } from "./ui";
 import { NotConfigured } from "./book-seat";
+import { PageHeader, Spinner } from "./brand";
 import { SeatLegend, SeatMap, seatStates } from "./seat-map";
 import { useCatalog, useLiveOccupancy, useMounted } from "@/lib/hooks";
 import { supabaseBrowser, supabaseConfigured } from "@/lib/supabase/client";
@@ -28,11 +29,11 @@ export function AdminConsole() {
   const { toast, show } = useToast();
 
   if (!supabaseConfigured) return <NotConfigured />;
-  if (!ready) return <div className="mx-auto max-w-6xl px-4 py-16"><div className="h-40 animate-pulse rounded-3xl bg-ink/5" /></div>;
+  if (!ready) return <div className="mx-auto max-w-6xl px-4 py-16"><div className="grid h-40 place-items-center"><Spinner className="h-8 w-8" /></div></div>;
   if (profile?.role !== "admin") {
     return (
       <div className="mx-auto max-w-md px-4 py-24 text-center">
-        <h1 className="text-xl font-semibold">Staff only</h1>
+        <h1 className="text-xl font-light uppercase">Staff only</h1>
         <p className="mt-2 text-sm text-ink/60">Sign in with a staff account to use the admin panel.</p>
         <Link href="/login?next=/admin" className="btn-spark mt-4">Sign in</Link>
       </div>
@@ -41,8 +42,8 @@ export function AdminConsole() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold">Admin</h1>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <PageHeader kicker="staff console" title="Admin" />
         <div className="inline-flex flex-wrap rounded-full bg-ink/5 p-1 text-sm">
           {TABS.map((t) => (
             <button key={t} onClick={() => setTab(t)} className={`rounded-full px-4 py-1.5 ${tab === t ? "bg-ink text-paper" : "text-ink/70 hover:text-ink"}`}>{t}</button>
@@ -194,7 +195,7 @@ function BookingRow({ b, act }: { b: AdminBooking; act: (fn: "cancel_booking" | 
         </p>
       </div>
       {b.kind !== "block" && b.status === "confirmed" && !b.checked_in_at && (
-        <button className="chip bg-free/15 text-free hover:bg-free hover:text-white" onClick={() => act("check_in", b.id, "Checked in")}>Check in</button>
+        <button className="chip bg-spark-pale text-spark-dark hover:bg-spark hover:text-ink" onClick={() => act("check_in", b.id, "Checked in")}>Check in</button>
       )}
       {b.checked_in_at && !b.checked_out_at && (
         <button className="chip bg-ink/10 hover:bg-ink hover:text-paper" onClick={() => act("check_out", b.id, "Checked out")}>Out</button>
@@ -255,7 +256,7 @@ function BookingsTab({ show }: { show: ShowFn }) {
       </div>
 
       <div className="card overflow-x-auto">
-        <table className="w-full min-w-[820px] text-sm">
+        <table className="brand-table w-full min-w-[820px] text-sm">
           <thead className="text-left text-xs text-ink/50">
             <tr>{["Resource", "Who", "When", "Status", "Billing", "Amount", "Check-in", ""].map((h) => <th key={h} className="px-4 py-3 font-medium">{h}</th>)}</tr>
           </thead>
@@ -404,7 +405,7 @@ function MembersTab({ show }: { show: ShowFn }) {
           <p className="font-semibold">Memberships ({members?.length ?? "…"})</p>
           <input className="field max-w-60" placeholder="Search name, email, org, seat" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
-        <table className="w-full min-w-[820px] text-sm">
+        <table className="brand-table w-full min-w-[820px] text-sm">
           <thead className="text-left text-xs text-ink/50">
             <tr>{["Member", "Organisation", "Plan", "Seat", "Since", "Status", ""].map((h) => <th key={h} className="px-4 py-2 font-medium">{h}</th>)}</tr>
           </thead>
@@ -426,7 +427,7 @@ function MembersTab({ show }: { show: ShowFn }) {
                 <td className="px-4 py-2 font-mono text-xs">{m.assigned_seat_id ?? "—"}</td>
                 <td className="px-4 py-2">{m.starts_on}</td>
                 <td className="px-4 py-2">
-                  <span className={`chip ${m.status === "active" ? "bg-free/15 text-free" : "bg-ink/10 text-ink/60"}`}>{m.status}</span>
+                  <span className={`chip ${m.status === "active" ? "bg-spark text-ink" : "bg-ink/10 text-ink/60"}`}>{m.status}</span>
                 </td>
                 <td className="px-4 py-2 text-right text-xs">
                   {m.status === "active" ? (
@@ -447,7 +448,7 @@ function MembersTab({ show }: { show: ShowFn }) {
 
       <div className="card overflow-x-auto">
         <p className="p-4 font-semibold">Day-pass guests ({guests.length}) <span className="text-xs font-normal text-ink/50">— details saved from public bookings</span></p>
-        <table className="w-full min-w-[640px] text-sm">
+        <table className="brand-table w-full min-w-[640px] text-sm">
           <thead className="text-left text-xs text-ink/50">
             <tr>{["Name", "Email", "Phone", "Organisation", "Signed up"].map((h) => <th key={h} className="px-4 py-2 font-medium">{h}</th>)}</tr>
           </thead>
@@ -520,7 +521,7 @@ function PricingTab({ show }: { show: ShowFn }) {
 
       <div className="card overflow-x-auto p-5">
         <p className="font-semibold">Plans</p>
-        <table className="mt-3 w-full min-w-[560px] text-sm">
+        <table className="brand-table mt-3 w-full min-w-[560px] text-sm">
           <thead className="text-left text-xs text-ink/50"><tr><th className="py-2">Plan</th><th>Monthly ₹</th><th>Desk days / month (blank = unlimited)</th><th>Room hours / month</th></tr></thead>
           <tbody>
             {plans.map((p, i) => (
@@ -537,7 +538,7 @@ function PricingTab({ show }: { show: ShowFn }) {
 
       <div className="card overflow-x-auto p-5">
         <p className="font-semibold">Rooms</p>
-        <table className="mt-3 w-full min-w-[560px] text-sm">
+        <table className="brand-table mt-3 w-full min-w-[560px] text-sm">
           <thead className="text-left text-xs text-ink/50"><tr><th className="py-2">Room</th><th>₹ / hour (0 = free, members only)</th><th>Minimum hours</th></tr></thead>
           <tbody>
             {rooms.map((r, i) => (
@@ -646,7 +647,7 @@ function ReportsTab() {
             const pct = Math.min(100, (x.units / desks) * 100);
             return (
               <div key={x.d} className="group relative flex-1" title={`${fmtDate(x.d)}: ${Math.round(pct)}% (${x.units} desk-days)`}>
-                <div className="rounded-t bg-spark transition group-hover:bg-ink" style={{ height: `${Math.max(pct, 1) * 1.6}px` }} />
+                <div className={`rounded-t transition group-hover:bg-ink ${pct >= 70 ? "bg-spark-dark" : pct >= 35 ? "bg-spark" : "bg-spark-light"}`} style={{ height: `${Math.max(pct, 1) * 1.6}px` }} />
               </div>
             );
           })}
@@ -666,7 +667,7 @@ function ReportsTab() {
               return (
                 <div key={r.id} className="text-sm">
                   <div className="flex justify-between"><span>{r.name}</span><span className="text-ink/50">{h} h · {Math.round(pct)}%</span></div>
-                  <div className="mt-1 h-1.5 rounded-full bg-ink/10"><div className="h-full rounded-full bg-ink" style={{ width: `${pct}%` }} /></div>
+                  <div className="mt-1 h-1.5 rounded-full bg-ink/10"><div className="h-full rounded-full bg-graphite" style={{ width: `${pct}%` }} /></div>
                 </div>
               );
             })}
