@@ -30,20 +30,27 @@ All booking logic lives in Postgres functions (`supabase/migrations/0001_init.sq
 
 1. **Create a Supabase project** (region: Mumbai).
 2. Copy `.env.example` to `.env.local` and fill in the Supabase URL, anon key, service role key, `DATABASE_URL` (Connect → Session pooler) and `ADMIN_EMAILS`.
-3. Create the database:
-   ```bash
-   npm install
-   npm run db:setup
-   ```
-4. **Sign-in emails.** In Supabase → Authentication → Emails → *Magic Link*, add `{{ .Token }}` to the template so the email includes a 6-digit code as well as the link. Under URL Configuration, set the Site URL to your Vercel URL and add `http://localhost:3000/**` and `https://YOUR-APP.vercel.app/**` as redirect URLs. Supabase's built-in email sender is rate-limited; add your own SMTP before real use.
+3. Create the database. Either run `npm run db:setup` (needs `DATABASE_URL`), or paste `supabase/migrations/*.sql` and then `supabase/seed.sql` into Supabase → SQL Editor and run them in order.
+4. **Sign-in emails.** Supabase's built-in sender only allows a few emails an hour and its templates can't be edited. Before real use, add SMTP (Authentication → Emails → SMTP Settings, e.g. Resend or Zoho ZeptoMail). Then edit the *Magic Link* and *Confirm signup* templates so the link is `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email&next=/book` and include `{{ .Token }}` as a 6-digit code. That link works on any device. Under URL Configuration, add `http://localhost:3000/**` and your Vercel URL as redirect URLs.
 5. **Vercel:** import the GitHub repo and add the same env vars, except `DATABASE_URL` and `ADMIN_EMAILS`, which aren't needed at runtime.
 6. Run locally with `npm run dev` and open http://localhost:3000.
+
+## Demo accounts (no email needed)
+
+```bash
+npm run demo:login                       # prints a one-time sign-in link for each persona
+npm run demo:login -- member             # just one
+npm run demo:login -- guest https://YOUR-APP.vercel.app
+```
+
+The personas are `staff` (admin), `member` (Flexi), `limited` (12 days), `fixed` (seat D-31) and `guest` (day pass). They use fake `@spark.test` addresses and are never emailed. To run two people side by side locally, open one link on `localhost:3000` and the other on `127.0.0.1:3000`; they keep separate sign-ins.
 
 ## Tests
 
 ```bash
 npm run test:db      # 42 rule checks against the real schema in an in-memory Postgres
-npm run test:race    # N people grab the same seats at the same instant on your Supabase DB; must end with 0 overlaps
+npm run test:race:api   # 24 signed-in people grab the same seat at once through the real API; exactly 1 must win
+npm run test:race       # same idea with hundreds of parallel DB sessions (needs DATABASE_URL)
 ```
 
 ## Not in v1 yet

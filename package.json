@@ -9,7 +9,9 @@
     "lint": "eslint",
     "test:db": "tsx scripts/test-db.ts",
     "db:setup": "tsx scripts/db-setup.ts",
-    "test:race": "tsx scripts/race-test.ts"
+    "test:race": "tsx scripts/race-test.ts",
+    "demo:login": "tsx scripts/demo-login.ts",
+    "test:race:api": "tsx scripts/race-api.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

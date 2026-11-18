@@ -568,10 +568,12 @@ function ReportsTab() {
     const end = istNow();
     const start = new Date(end);
     start.setDate(start.getDate() - 29);
+    const ahead = new Date(end);
+    ahead.setDate(ahead.getDate() + 45); // overage for the rest of the month is already known
     const sb = supabaseBrowser();
     Promise.all([
       sb.from("bookings").select("*, profiles(full_name, email, phone, organisation)")
-        .gte("booking_date", toISODate(start)).lte("booking_date", toISODate(end)).eq("status", "confirmed").limit(10000),
+        .gte("booking_date", toISODate(start)).lte("booking_date", toISODate(ahead)).eq("status", "confirmed").limit(10000),
       sb.from("payments").select("amount, gst_amount, status, created_at").gte("created_at", start.toISOString()),
     ]).then(([b, p]) => {
       setRows((b.data as AdminBooking[]) ?? []);
@@ -594,7 +596,9 @@ function ReportsTab() {
 
   if (!rows) return <p className="text-sm text-ink/50">Loading…</p>;
 
-  const deskRows = rows.filter((b) => b.kind === "desk");
+  const today = todayIST();
+  const pastRows = rows.filter((b) => b.booking_date <= today);
+  const deskRows = pastRows.filter((b) => b.kind === "desk");
   const perDay = days.map((d) => ({
     d,
     units: deskRows.filter((b) => b.booking_date === d).reduce((s, b) => s + (b.part === "full" ? 1 : 0.5), 0),
@@ -604,7 +608,7 @@ function ReportsTab() {
   const captured = payments.filter((p) => p.status === "captured");
   const revenue = captured.reduce((s, p) => s + p.amount, 0);
   const refunds = payments.filter((p) => p.status === "refund_due");
-  const month = todayIST().slice(0, 7);
+  const month = today.slice(0, 7);
   const overage = rows.filter((b) => b.billing === "overage" && b.booking_date.startsWith(month));
   const overageBy = new Map<string, { name: string; amount: number; n: number }>();
   for (const b of overage) {
@@ -614,7 +618,7 @@ function ReportsTab() {
     cur.n += 1;
     overageBy.set(k, cur);
   }
-  const roomRows = rows.filter((b) => b.kind === "room");
+  const roomRows = pastRows.filter((b) => b.kind === "room");
   const roomHours = new Map<string, number>();
   for (const b of roomRows) {
     const r = parseRange(b.slot);
