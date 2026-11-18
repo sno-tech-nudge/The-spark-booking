@@ -48,7 +48,7 @@ The personas are `staff` (admin), `member` (Flexi), `limited` (12 days), `fixed`
 ## Tests
 
 ```bash
-npm run test:db      # 42 rule checks against the real schema in an in-memory Postgres
+npm run test:db         # 43 rule checks against the real schema in an in-memory Postgres
 npm run test:race:api   # 24 signed-in people grab the same seat at once through the real API; exactly 1 must win
 npm run test:race       # same idea with hundreds of parallel DB sessions (needs DATABASE_URL)
 ```
