@@ -8,7 +8,7 @@
  * Safe to re-run: the schema is only created once; seed + admins are upserts.
  */
 import { config } from "dotenv";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { Client } from "pg";
 
@@ -21,12 +21,16 @@ async function main() {
   await db.connect();
 
   const root = join(__dirname, "..");
-  const { rows } = await db.query(`select to_regclass('public.bookings') as t`);
-  if (!rows[0].t) {
-    console.log("Creating schema…");
-    await db.query(readFileSync(join(root, "supabase/migrations/0001_init.sql"), "utf8"));
-  } else {
-    console.log("Schema already exists — skipping migration.");
+  await db.query(`create table if not exists public._migrations (name text primary key, applied_at timestamptz default now())`);
+  await db.query(`alter table public._migrations enable row level security`);
+  const { rows: t } = await db.query(`select to_regclass('public.bookings') as t`);
+  if (t[0].t) await db.query(`insert into public._migrations (name) values ('0001_init.sql') on conflict do nothing`);
+  const done = new Set((await db.query(`select name from public._migrations`)).rows.map((r) => r.name));
+  for (const f of readdirSync(join(root, "supabase/migrations")).filter((f) => f.endsWith(".sql")).sort()) {
+    if (done.has(f)) continue;
+    console.log(`Applying ${f}…`);
+    await db.query(readFileSync(join(root, "supabase/migrations", f), "utf8"));
+    await db.query(`insert into public._migrations (name) values ($1)`, [f]);
   }
 
   console.log("Loading seats, rooms, plans…");

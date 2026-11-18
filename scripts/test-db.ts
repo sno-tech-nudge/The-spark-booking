@@ -12,6 +12,7 @@ import { randomUUID } from "node:crypto";
 
 const root = join(__dirname, "..");
 const migration = readFileSync(join(root, "supabase/migrations/0001_init.sql"), "utf8");
+const grants = readFileSync(join(root, "supabase/migrations/0002_grants.sql"), "utf8");
 const seed = readFileSync(join(root, "supabase/seed.sql"), "utf8");
 
 let passed = 0;
@@ -40,11 +41,7 @@ async function main() {
   `);
   await db.exec(migration);
   await db.exec(seed);
-  await db.exec(`
-    grant usage on schema public to anon, authenticated;
-    grant select on all tables in schema public to anon, authenticated;
-    grant update on public.profiles to authenticated;
-  `);
+  await db.exec(grants);
 
   const as = async (uid: string | null) => {
     await db.query(`select set_config('request.jwt.claim.sub', $1, false)`, [uid ?? ""]);
@@ -242,7 +239,9 @@ async function main() {
   } catch (e) {
     roleErr = (e as Error).message;
   }
-  ok(roleErr.includes("role can only be changed"), "members can't make themselves admin");
+  ok(/role can only be changed|permission denied/.test(roleErr), "members can't make themselves admin");
+  const ownName = await db.query(`update public.profiles set full_name = 'Flexi Person' where id = auth.uid() returning full_name`);
+  ok(ownName.rows.length === 1, "members can edit their own name");
   let payErr = "";
   try {
     await db.query(`select public.confirm_paid_booking($1, 'demo', 'x', 'y')`, [guestHold]);
