@@ -5,6 +5,7 @@ import { bookingToEvent, downloadIcs, googleCalendarUrl } from "@/lib/calendar";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import type { Booking } from "@/lib/types";
 import { Spinner } from "./brand";
+import { publicOrigin } from "@/lib/site";
 
 function GoogleIcon() {
   return (
@@ -27,7 +28,7 @@ function AppleIcon() {
 
 /** "Add to Google / Apple Calendar" for one booking. */
 export function AddToCalendar({ booking, resourceName, compact = false }: { booking: Booking; resourceName: string; compact?: boolean }) {
-  const ev = () => bookingToEvent(booking, resourceName, window.location.origin);
+  const ev = () => bookingToEvent(booking, resourceName, publicOrigin());
   const cls = compact
     ? "inline-flex items-center gap-1.5 rounded-full border border-sand bg-white px-2.5 py-1 text-xs hover:border-ink"
     : "btn-ghost flex-1";
@@ -57,9 +58,9 @@ export function CalendarSync() {
   };
   useEffect(() => { load(); }, []);
 
-  const host = typeof window === "undefined" ? "" : window.location.host;
-  const https = token ? `https://${host}/api/calendar/${token}` : "";
-  const webcal = token ? `webcal://${host}/api/calendar/${token}` : "";
+  const base = publicOrigin();
+  const https = token ? `${base}/api/calendar/${token}` : "";
+  const webcal = https.replace(/^https?:/, "webcal:");
 
   return (
     <div className="card p-5">

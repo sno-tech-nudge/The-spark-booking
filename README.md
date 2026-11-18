@@ -32,7 +32,7 @@ All booking logic lives in Postgres functions (`supabase/migrations/0001_init.sq
 2. Copy `.env.example` to `.env.local` and fill in the Supabase URL, anon key, service role key, `DATABASE_URL` (Connect → Session pooler) and `ADMIN_EMAILS`.
 3. Create the database. Either run `npm run db:setup` (needs `DATABASE_URL`), or paste `supabase/migrations/*.sql` and then `supabase/seed.sql` into Supabase → SQL Editor and run them in order.
 4. **Sign-in emails.** Supabase's built-in sender only allows a few emails an hour and its templates can't be edited. Before real use, add SMTP (Authentication → Emails → SMTP Settings, e.g. Resend or Zoho ZeptoMail). Then edit the *Magic Link* and *Confirm signup* templates so the link is `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email&next=/book` and include `{{ .Token }}` as a 6-digit code. That link works on any device. Under URL Configuration, add `http://localhost:3000/**` and your Vercel URL as redirect URLs.
-5. **Vercel:** import the GitHub repo and add the same env vars, except `DATABASE_URL` and `ADMIN_EMAILS`, which aren't needed at runtime.
+5. **Vercel:** the public app is https://sparkbooking.vercel.app (the team `*-sno-tech.vercel.app` addresses stay behind Vercel login). Import the GitHub repo and add the same env vars, except `DATABASE_URL` and `ADMIN_EMAILS`, which aren't needed at runtime.
 6. Run locally with `npm run dev` and open http://localhost:3000.
 
 ## Demo accounts (no email needed)
