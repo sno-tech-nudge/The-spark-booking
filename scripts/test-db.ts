@@ -13,6 +13,7 @@ import { randomUUID } from "node:crypto";
 const root = join(__dirname, "..");
 const migration = readFileSync(join(root, "supabase/migrations/0001_init.sql"), "utf8");
 const grants = readFileSync(join(root, "supabase/migrations/0002_grants.sql"), "utf8");
+const m3 = readFileSync(join(root, "supabase/migrations/0003_hold_and_calendar.sql"), "utf8");
 const seed = readFileSync(join(root, "supabase/seed.sql"), "utf8");
 
 let passed = 0;
@@ -42,6 +43,7 @@ async function main() {
   await db.exec(migration);
   await db.exec(seed);
   await db.exec(grants);
+  await db.exec(m3);
 
   const as = async (uid: string | null) => {
     await db.query(`select set_config('request.jwt.claim.sub', $1, false)`, [uid ?? ""]);
@@ -117,6 +119,8 @@ async function main() {
   ok(r.error?.includes("TAKEN"), "guest cannot take A-01 morning (full day already booked)");
   r = await bookDesk("A-02", d1, "morning");
   ok(r.row?.status === "held" && Number(r.row?.amount) === 300, "guest holds A-02 morning, ₹300 to pay");
+  const holdMins = (new Date(String(r.row?.hold_expires_at)).getTime() - Date.now()) / 60000;
+  ok(holdMins > 9.5 && holdMins <= 10.01, `seat is held for 10 minutes (${holdMins.toFixed(2)})`);
   const guestHold = r.row?.id as string;
   await as(limited);
   r = await bookDesk("A-02", d1, "afternoon");
@@ -225,6 +229,16 @@ async function main() {
   r = await rpc(`select * from public.admin_block('A-02', $1::date, 'x')`, [d1]);
   ok(r.error?.includes("HAS_BOOKINGS"), "can't block over existing bookings");
 
+  console.log("\nCalendar feed tokens");
+  await as(flexi);
+  const tok = async (reset: boolean) =>
+    (await db.query<{ t: string }>(`select public.my_calendar_token($1) t`, [reset])).rows[0].t;
+  const t1 = await tok(false);
+  const t2 = await tok(false);
+  const t3 = await tok(true);
+  ok(t1.length === 64 && t1 === t2, "each person gets one stable 64-char feed token");
+  ok(t3 !== t1, "resetting the feed link issues a new token");
+
   console.log("\nRow level security (as a signed-in user)");
   await as(flexi);
   await db.exec(`set role authenticated`);
@@ -249,6 +263,13 @@ async function main() {
     payErr = (e as Error).message;
   }
   ok(payErr.includes("permission denied"), "only the server can mark a booking paid");
+  let tokErr = "";
+  try {
+    await db.query(`select token from public.calendar_tokens`);
+  } catch (e) {
+    tokErr = (e as Error).message;
+  }
+  ok(tokErr.includes("permission denied"), "nobody can list other people's calendar tokens");
   await db.exec(`reset role`);
 
   console.log(`\n${passed} passed, ${failed} failed`);
