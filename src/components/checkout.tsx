@@ -151,7 +151,7 @@ export function Checkout({
             </div>
           </div>
           <dl className="space-y-1 text-sm">
-            <div className="flex justify-between"><dt className="text-ink/60">Day pass</dt><dd>{inr(booking.amount)}</dd></div>
+            <div className="flex justify-between"><dt className="text-ink/60">{booking.part === "full" ? "Day pass" : "Half-day pass"}</dt><dd>{inr(booking.amount)}</dd></div>
             <div className="flex justify-between"><dt className="text-ink/60">GST {gstRate}%</dt><dd>{inr(gst)}</dd></div>
             <div className="flex justify-between border-t border-ink/10 pt-2 font-semibold"><dt>Total</dt><dd>{inr(total)}</dd></div>
           </dl>
