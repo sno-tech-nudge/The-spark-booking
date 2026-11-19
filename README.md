@@ -41,6 +41,7 @@ All booking logic lives in Postgres functions (`supabase/migrations/0001_init.sq
 npm run demo:login                       # prints a one-time sign-in link for each persona
 npm run demo:login -- member             # just one
 npm run demo:login -- guest https://YOUR-APP.vercel.app
+npm run demo:login -- you@example.org https://YOUR-APP.vercel.app   # instant link for a real admin/member account
 ```
 
 The personas are `staff` (admin), `member` (Flexi), `limited` (12 days), `fixed` (seat D-31) and `guest` (day pass). They use fake `@spark.test` addresses and are never emailed. To run two people side by side locally, open one link on `localhost:3000` and the other on `127.0.0.1:3000`; they keep separate sign-ins.

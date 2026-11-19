@@ -4,6 +4,7 @@
  *   npm run demo:login                 → creates the personas (once) and prints a sign-in link for each
  *   npm run demo:login -- member       → link for one persona
  *   npm run demo:login -- guest https://your-app.vercel.app
+ *   npm run demo:login -- you@example.org https://your-app.vercel.app   → link for a real account
  *
  * Personas (fake @spark.test addresses, never emailed):
  *   staff    → admin panel
@@ -33,6 +34,22 @@ async function main() {
   const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+
+  // Any real email (already set up as admin/member in the app): instant sign-in link, no email sent.
+  //   npm run demo:login -- you@example.org https://sparkbooking.vercel.app
+  if (which && String(which).includes("@")) {
+    const email = String(which).toLowerCase();
+    let { data, error } = await sb.auth.admin.generateLink({ type: "magiclink", email });
+    if (error && /not found/i.test(error.message)) {
+      await sb.auth.admin.createUser({ email, email_confirm: true });
+      ({ data, error } = await sb.auth.admin.generateLink({ type: "magiclink", email }));
+    }
+    if (error || !data?.properties) throw error ?? new Error("Could not create a link");
+    const { data: prof } = await sb.from("profiles").select("role").eq("id", data.user.id).maybeSingle();
+    const next = prof?.role === "admin" ? "/admin" : "/book";
+    console.log(`${email} (${prof?.role ?? "new"})\n${base}/auth/confirm?token_hash=${data.properties.hashed_token}&type=magiclink&next=${next}`);
+    return;
+  }
 
   const keys = which ? [which] : (Object.keys(PERSONAS) as (keyof typeof PERSONAS)[]);
   for (const key of keys) {
