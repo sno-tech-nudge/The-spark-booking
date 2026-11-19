@@ -23,6 +23,8 @@ const MESSAGES: Record<string, string> = {
 
 export function friendlyError(raw: unknown): string {
   const msg = typeof raw === "string" ? raw : (raw as { message?: string })?.message ?? String(raw);
+  const closed = msg.match(/CLOSED\|(.+)$/);
+  if (closed) return `Closed that day: ${closed[1]}`;
   const min = msg.match(/MIN_HOURS_(\d+)/);
   if (min) return `This room needs at least ${min[1]} hours.`;
   const hrs = msg.match(/OUTSIDE_HOURS_(\d+)_(\d+)/);

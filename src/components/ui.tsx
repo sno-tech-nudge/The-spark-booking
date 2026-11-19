@@ -14,11 +14,13 @@ export function Loader({ label, className = "py-16" }: { label?: string; classNa
 }
 
 export function DateStrip({
-  days, value, onChange,
+  days, value, onChange, marks,
 }: {
   days: { date: string; dow: string; day: string; month: string }[];
   value: string | null;
   onChange: (d: string) => void;
+  /** small note under a day, e.g. "Closed" or "Zone B" */
+  marks?: Map<string, string>;
 }) {
   return (
     <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
@@ -37,6 +39,11 @@ export function DateStrip({
                 <span className={`text-[10px] uppercase ${active ? "text-spark" : "text-ink/50"}`}>{i === 0 ? "Today" : d.dow}</span>
                 <span className="text-xl font-light leading-tight">{d.day}</span>
                 <span className="text-[10px] opacity-60">{d.month}</span>
+                {marks?.get(d.date) && (
+                  <span className={`mt-0.5 max-w-full truncate rounded-full px-1.5 text-[9px] font-medium ${active ? "bg-spark text-ink" : "bg-spark-light text-ink"}`}>
+                    {marks.get(d.date)}
+                  </span>
+                )}
               </button>
             );
           })}

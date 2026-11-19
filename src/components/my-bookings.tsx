@@ -12,6 +12,7 @@ import { InstallCard } from "./pwa";
 import { useCatalog, useMounted, useUsage } from "@/lib/hooks";
 import { supabaseBrowser, supabaseConfigured } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/errors";
+import { buzz } from "@/lib/haptics";
 import { PARTS, fmtDate, fmtHour, inr, istHour, parseRange, todayIST } from "@/lib/time";
 import type { Booking } from "@/lib/types";
 
@@ -36,6 +37,7 @@ export function MyBookings() {
   async function act(fn: "cancel_booking" | "check_in" | "check_out", id: string, okText: string) {
     const { error } = await supabaseBrowser().rpc(fn, { p_id: id });
     if (error) return show(friendlyError(error), "error");
+    if (fn === "check_in") buzz();
     show(okText);
     load();
     reloadUsage();

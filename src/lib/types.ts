@@ -33,6 +33,7 @@ export type Settings = {
   after_hours_close: number;
   gst_rate: number;
   booking_window_days: number;
+  busy_nudge_pct?: number;
 };
 
 export type Resource = {

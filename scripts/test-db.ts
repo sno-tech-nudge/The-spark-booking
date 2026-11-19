@@ -14,6 +14,7 @@ const root = join(__dirname, "..");
 const migration = readFileSync(join(root, "supabase/migrations/0001_init.sql"), "utf8");
 const grants = readFileSync(join(root, "supabase/migrations/0002_grants.sql"), "utf8");
 const m3 = readFileSync(join(root, "supabase/migrations/0003_hold_and_calendar.sql"), "utf8");
+const m4 = readFileSync(join(root, "supabase/migrations/0004_announcements.sql"), "utf8");
 const seed = readFileSync(join(root, "supabase/seed.sql"), "utf8");
 
 let passed = 0;
@@ -44,6 +45,7 @@ async function main() {
   await db.exec(seed);
   await db.exec(grants);
   await db.exec(m3);
+  await db.exec(m4);
 
   const as = async (uid: string | null) => {
     await db.query(`select set_config('request.jwt.claim.sub', $1, false)`, [uid ?? ""]);
@@ -228,6 +230,36 @@ async function main() {
   await as(admin);
   r = await rpc(`select * from public.admin_block('A-02', $1::date, 'x')`, [d1]);
   ok(r.error?.includes("HAS_BOOKINGS"), "can't block over existing bookings");
+
+  console.log("\nAnnouncements & closures");
+  await db.query(
+    `insert into public.announcements (message, starts_on, ends_on, closure, zone) values ('AC servicing in Zone B', $1, $1, 'zone', 'B')`, [d2]);
+  await db.query(
+    `insert into public.announcements (message, starts_on, ends_on, closure) values ('Rooms closed for deep cleaning', $1, $1, 'rooms')`, [d2]);
+  await db.query(
+    `insert into public.announcements (message, starts_on, ends_on) values ('Community lunch on Friday!', $1, $1)`, [d2]);
+  await as(fixed);
+  r = await bookDesk("B-20", d2, "full");
+  ok(r.error?.includes("CLOSED|AC servicing in Zone B"), "zone closure refuses Zone B seats with the notice text");
+  r = await bookDesk("A-20", d2, "morning");
+  ok(r.row?.status === "confirmed", "other zones stay bookable (a plain notice doesn't block)");
+  r = await bookRoom("MR10-1", d2, 10, 1);
+  ok(r.error?.includes("CLOSED|Rooms closed"), "room closure refuses room bookings");
+  await db.query(`update public.announcements set active = false where closure = 'zone'`);
+  r = await bookDesk("B-21", d2, "afternoon");
+  ok(r.error?.includes("ALREADY_HAVE_DESK") || r.row?.status === "confirmed", "switching a closure off makes the zone bookable again");
+  await as(guest2);
+  r = await bookDesk("B-22", d2, "full");
+  ok(r.row?.status === "held", "…for anyone");
+  await db.exec(`set role authenticated`);
+  let annErr = "";
+  try {
+    await db.query(`insert into public.announcements (message, starts_on, ends_on) values ('hacked', current_date, current_date)`);
+  } catch (e) {
+    annErr = (e as Error).message;
+  }
+  await db.exec(`reset role`);
+  ok(annErr.includes("row-level security"), "only staff can post announcements");
 
   console.log("\nCalendar feed tokens");
   await as(flexi);

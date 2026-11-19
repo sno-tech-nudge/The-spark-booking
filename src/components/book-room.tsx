@@ -8,6 +8,9 @@ import { NotConfigured } from "./book-seat";
 import { PageHeader, SparkMark, Spinner } from "./brand";
 import { AddToCalendar } from "./calendar-actions";
 import { useCatalog, useLiveOccupancy, useMounted, useUsage } from "@/lib/hooks";
+import { useAnnouncements } from "./announcements";
+import { closedOn } from "@/lib/announcements";
+import { buzz } from "@/lib/haptics";
 import { supabaseBrowser, supabaseConfigured } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/errors";
 import { fmtDate, fmtHour, inr, istHour, istTimestamp, openDays, todayIST } from "@/lib/time";
@@ -48,6 +51,8 @@ export function BookRoom() {
 
   const s = catalog?.settings;
   const rooms = useMemo(() => catalog?.resources.filter((r) => r.kind === "room") ?? [], [catalog]);
+  const { announcements } = useAnnouncements();
+  const closed = useMemo(() => closedOn(announcements, date, rooms), [announcements, date, rooms]);
   const plan = catalog?.plans.find((p) => p.id === usage?.plan_id);
   const afterHours = Boolean(plan?.after_hours_access);
   const dayStart = s?.after_hours_open ?? 8;
@@ -131,6 +136,7 @@ export function BookRoom() {
     setMyIds((prev) => new Set(prev).add(b.id));
     setSel(null);
     setDone(b);
+    buzz();
     reloadUsage();
   }
 
@@ -176,9 +182,10 @@ export function BookRoom() {
                         {r.capacity} pax · {r.hourly_rate ? `${inr(r.hourly_rate)}/h` : "free"}
                         {r.members_only && " · members"}{r.min_hours > 1 && ` · min ${r.min_hours}h`}
                       </p>
+                      {closed.get(r.id) && <p className="mt-0.5 max-w-52 truncate text-[11px] font-medium text-spark-dark">Closed · {closed.get(r.id)}</p>}
                     </td>
                     {hourCols.map((h) => {
-                      const t = taken.get(r.id)?.get(h);
+                      const t = closed.has(r.id) ? "blocked" : taken.get(r.id)?.get(h);
                       const outside = h < open || h >= close;
                       const past = isToday && h < nowHour;
                       const selected = sel?.room.id === r.id && h >= sel.start && h < sel.start + hours;

@@ -6,6 +6,7 @@ import { useAuth } from "./auth-provider";
 import { LiveBadge, Loader, Stat, Toast, useToast } from "./ui";
 import { NotConfigured } from "./book-seat";
 import { PageHeader, Spinner } from "./brand";
+import { NoticesTab } from "./admin-notices";
 import { SeatLegend, SeatMap, seatStates } from "./seat-map";
 import { useCatalog, useLiveOccupancy, useMounted } from "@/lib/hooks";
 import { supabaseBrowser, supabaseConfigured } from "@/lib/supabase/client";
@@ -20,7 +21,7 @@ type Membership = {
   profiles: Pick<Profile, "full_name" | "phone"> | null;
 };
 
-const TABS = ["Live", "Bookings", "Members", "Pricing", "Reports"] as const;
+const TABS = ["Live", "Bookings", "Members", "Notices", "Pricing", "Reports"] as const;
 type Tab = (typeof TABS)[number];
 
 export function AdminConsole() {
@@ -43,7 +44,15 @@ export function AdminConsole() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <PageHeader kicker="staff console" title="Admin" />
+        <PageHeader
+          kicker="staff console"
+          title="Admin"
+          right={
+            <a href="/display" target="_blank" rel="noopener" className="btn-ink !py-2 text-sm" title="Open the full-screen board for the TV at the entrance">
+              Reception screen ↗
+            </a>
+          }
+        />
         <div className="inline-flex flex-wrap rounded-full bg-ink/5 p-1 text-sm">
           {TABS.map((t) => (
             <button key={t} onClick={() => setTab(t)} className={`rounded-full px-4 py-1.5 ${tab === t ? "bg-ink text-paper" : "text-ink/70 hover:text-ink"}`}>{t}</button>
@@ -56,6 +65,7 @@ export function AdminConsole() {
         {tab === "Members" && <MembersTab show={show} />}
         {tab === "Pricing" && <PricingTab show={show} />}
         {tab === "Reports" && <ReportsTab />}
+        {tab === "Notices" && <NoticesTab show={show} />}
       </div>
       <Toast toast={toast} />
     </div>
@@ -489,6 +499,7 @@ function PricingTab({ show }: { show: ShowFn }) {
       sb.from("settings").update({
         day_pass_price: settings!.day_pass_price, half_day_price: settings!.half_day_price,
         hold_minutes: settings!.hold_minutes, gst_rate: settings!.gst_rate,
+        busy_nudge_pct: settings!.busy_nudge_pct ?? 80,
       }).eq("id", true),
       ...plans.map((p) => sb.from("plans").update({
         monthly_price: p.monthly_price, desk_days_included: p.desk_days_included, room_hours_included: p.room_hours_included,
@@ -511,10 +522,11 @@ function PricingTab({ show }: { show: ShowFn }) {
         {([
           ["day_pass_price", "Day pass (₹)"], ["half_day_price", "Half-day pass (₹)"],
           ["hold_minutes", "Seat hold while paying (min)"], ["gst_rate", "GST %"],
+          ["busy_nudge_pct", "“Book now” nudge when a day is ≥ (%) full"],
         ] as const).map(([k, label]) => (
           <div key={k}>
             <label className="label">{label}</label>
-            <input type="number" className="field" value={settings[k]} onChange={(e) => setSettings({ ...settings, [k]: num(e.target.value) })} />
+            <input type="number" className="field" value={settings[k] ?? 80} onChange={(e) => setSettings({ ...settings, [k]: num(e.target.value) })} />
           </div>
         ))}
       </div>

@@ -21,10 +21,11 @@ export function seatStates(
   part: Part,
   myBookingIds: Set<string>,
   myAssignedSeat: string | null,
+  closed?: Map<string, string>,
 ): Map<string, SeatState> {
   const out = new Map<string, SeatState>();
   for (const d of desks) {
-    out.set(d.id, d.assigned_membership ? (d.id === myAssignedSeat ? "my-seat" : "assigned") : "free");
+    out.set(d.id, closed?.has(d.id) ? "blocked" : d.assigned_membership ? (d.id === myAssignedSeat ? "my-seat" : "assigned") : "free");
   }
   for (const o of occupancy) {
     if (!out.has(o.resource_id)) continue;

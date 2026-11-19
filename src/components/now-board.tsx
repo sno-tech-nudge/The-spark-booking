@@ -10,10 +10,15 @@ import { NotConfigured } from "./book-seat";
 import { useCatalog, useClock, useLiveOccupancy, useMounted } from "@/lib/hooks";
 import { supabaseBrowser, supabaseConfigured } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/errors";
+import { closedOn } from "@/lib/announcements";
+import { useAnnouncements } from "./announcements";
+import { BusyNudge, PullToRefresh } from "./nudges";
+import { buzz } from "@/lib/haptics";
 import { PARTS, fmtDate, fmtHour, istHour, parseRange, todayIST } from "@/lib/time";
 import type { Booking, Occupancy, Resource } from "@/lib/types";
 
 const TZ = "Asia/Kolkata";
+const REFRESH_EVENT = "spark:refresh";
 
 function slotLabel(h: number, dow: number) {
   if (dow === 0) return "Closed today (Sunday)";
@@ -52,7 +57,11 @@ export function OngoingTicket({ compact = false }: { compact?: boolean }) {
   useEffect(() => {
     load();
     const t = setInterval(load, 60_000);
-    return () => clearInterval(t);
+    window.addEventListener(REFRESH_EVENT, load);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener(REFRESH_EVENT, load);
+    };
   }, [load]);
 
   if (!user || !now || bookings === null) return null;
@@ -86,6 +95,7 @@ export function OngoingTicket({ compact = false }: { compact?: boolean }) {
     const { error } = await supabaseBrowser().rpc("check_in", { p_id: b.id });
     if (error) return show(friendlyError(error), "error");
     show("Checked in — welcome to the*spark!");
+    buzz();
     load();
   }
 
@@ -134,11 +144,19 @@ export function NowBoard() {
   const now = useClock(1000);
   const today = mounted ? todayIST() : null;
   const { catalog } = useCatalog();
-  const { occupancy, live } = useLiveOccupancy(today);
+  const { occupancy, live, reload } = useLiveOccupancy(today);
   const { user } = useAuth();
+  const { announcements, reload: reloadNotices } = useAnnouncements();
 
   const rooms = useMemo(() => catalog?.resources.filter((r) => r.kind === "room") ?? [], [catalog]);
   const desks = useMemo(() => catalog?.resources.filter((r) => r.kind === "desk") ?? [], [catalog]);
+  const closedToday = useMemo(() => closedOn(announcements, today, catalog?.resources ?? []), [announcements, today, catalog]);
+
+  // pull-to-refresh: re-read everything on the page
+  const refresh = useCallback(async () => {
+    await Promise.all([reload(), reloadNotices()]);
+    window.dispatchEvent(new Event(REFRESH_EVENT));
+  }, [reload, reloadNotices]);
 
   if (!supabaseConfigured) return <NotConfigured />;
   if (!now || !catalog) return <Loader label="Opening the live board" className="py-32" />;
@@ -155,8 +173,20 @@ export function NowBoard() {
   const zones = [...new Set(desks.map((d) => d.zone ?? "?"))];
 
   return (
+    <PullToRefresh onRefresh={refresh}>
     <div className="relative mx-auto max-w-6xl px-4 py-10">
       <PageHeader kicker="happening at the*spark" title="Live now" right={<LiveBadge state={live} />} />
+      <p className="mt-1 text-xs text-ink/45 md:hidden">Pull down to refresh</p>
+
+      <div className="mt-6 space-y-3">
+        <BusyNudge />
+        {[...new Set(closedToday.values())].map((msg) => (
+          <p key={msg} className="flex items-center gap-2 rounded-2xl bg-spark-light/70 px-4 py-2.5 text-sm">
+            <SparkMark className="h-4 w-4 shrink-0 text-spark-dark" />
+            <span><b>Today:</b> {msg}</span>
+          </p>
+        ))}
+      </div>
 
       <div className="mt-8 grid gap-4 lg:grid-cols-[1.1fr_1fr]">
         {/* clock */}
@@ -213,7 +243,7 @@ export function NowBoard() {
         <CornerSpark />
         <p className="text-[11px] uppercase tracking-[0.12em] text-ink/55">Rooms today</p>
         <div className="mt-4 space-y-3">
-          {rooms.map((r) => <RoomNowRow key={r.id} room={r} occupancy={occupancy} t={t} nowH={nowH} />)}
+          {rooms.map((r) => <RoomNowRow key={r.id} room={r} occupancy={occupancy} t={t} nowH={nowH} closedMsg={closedToday.get(r.id)} />)}
         </div>
         <div className="mt-2 grid grid-cols-[40%_1fr] gap-3 sm:grid-cols-[34%_1fr]">
           <span />
@@ -225,10 +255,11 @@ export function NowBoard() {
         </div>
       </div>
     </div>
+    </PullToRefresh>
   );
 }
 
-function RoomNowRow({ room, occupancy, t, nowH }: { room: Resource; occupancy: Occupancy[]; t: number; nowH: number }) {
+function RoomNowRow({ room, occupancy, t, nowH, closedMsg }: { room: Resource; occupancy: Occupancy[]; t: number; nowH: number; closedMsg?: string }) {
   const mine = occupancy
     .filter((o) => o.resource_id === room.id)
     .map((o) => ({ o, s: new Date(o.start_at).getTime(), e: new Date(o.end_at).getTime() }))
@@ -239,7 +270,7 @@ function RoomNowRow({ room, occupancy, t, nowH }: { room: Resource; occupancy: O
   const pos = (h: number) => `${Math.max(0, Math.min(100, ((h - DAY0) / (DAY1 - DAY0)) * 100))}%`;
 
   let status: React.ReactNode;
-  if (cur?.o.kind === "block") status = <span className="chip bg-ink/10 text-ink/60">Closed today</span>;
+  if (closedMsg || cur?.o.kind === "block") status = <span className="chip bg-ink/10 text-ink/60">Closed today</span>;
   else if (cur) status = <span className="chip bg-spark text-ink">In use · until {fmtHour(istHour(cur.o.end_at) || 24)}</span>;
   else if (nxt) status = <span className="chip bg-spark-pale text-spark-dark">Free · until {fmtHour(istHour(nxt.o.start_at))}</span>;
   else status = <span className="chip bg-white text-ink/60 ring-1 ring-sand">Free rest of day</span>;

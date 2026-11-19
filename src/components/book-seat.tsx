@@ -10,6 +10,10 @@ import { DateStrip, LiveBadge, Loader, Sheet, Toast, useToast } from "./ui";
 import { SeatLegend, SeatMap, seatStates } from "./seat-map";
 import { PageHeader, SparkMark, Spinner } from "./brand";
 import { useCatalog, useLiveOccupancy, useMounted, useUsage } from "@/lib/hooks";
+import { useAnnouncements } from "./announcements";
+import { BusyNudge } from "./nudges";
+import { closedOn } from "@/lib/announcements";
+import { buzz } from "@/lib/haptics";
 import { supabaseBrowser, supabaseConfigured } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/errors";
 import { PARTS, fmtDate, inr, openDays } from "@/lib/time";
@@ -32,7 +36,9 @@ export function BookSeat() {
   const { usage, reload: reloadUsage } = useUsage(Boolean(user));
 
   useEffect(() => {
-    if (days.length && !date) setDate(days[0].date);
+    if (!days.length || date) return;
+    const wanted = new URLSearchParams(window.location.search).get("date");
+    setDate(days.find((d) => d.date === wanted)?.date ?? days[0].date);
   }, [days, date]);
 
   // Came back mid-checkout? Pick up the seat still on hold (like BookMyShow).
@@ -62,10 +68,25 @@ export function BookSeat() {
   useEffect(() => { loadMine(); }, [loadMine, occupancy.length]);
 
   const desks = useMemo(() => catalog?.resources.filter((r) => r.kind === "desk") ?? [], [catalog]);
+  const { announcements } = useAnnouncements();
+  const closed = useMemo(() => closedOn(announcements, date, desks), [announcements, date, desks]);
   const states = useMemo(
-    () => seatStates(desks, occupancy, part, myIds, usage?.assigned_seat_id ?? null),
-    [desks, occupancy, part, myIds, usage?.assigned_seat_id],
+    () => seatStates(desks, occupancy, part, myIds, usage?.assigned_seat_id ?? null, closed),
+    [desks, occupancy, part, myIds, usage?.assigned_seat_id, closed],
   );
+  // closure notes on the date strip ("Closed", "Zone B shut")
+  const dayMarks = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const d of days) {
+      const c = closedOn(announcements, d.date, desks);
+      if (!c.size) continue;
+      if (c.size >= desks.length) { m.set(d.date, "Closed"); continue; }
+      const zones = [...new Set(desks.filter((x) => c.has(x.id)).map((x) => x.zone))];
+      m.set(d.date, zones.length === 1 && desks.filter((x) => x.zone === zones[0]).every((x) => c.has(x.id)) ? `Zone ${zones[0]} shut` : "Some closed");
+    }
+    return m;
+  }, [announcements, days, desks]);
+  const dayNotices = [...new Set(closed.values())];
   const freeCount = [...states.values()].filter((s) => s === "free").length;
 
   // if the seat I'm looking at gets taken by someone else, tell me right away
@@ -104,6 +125,7 @@ export function BookSeat() {
     } else {
       setSelected(null);
       setDone(b);
+      buzz();
       reloadUsage();
     }
   }
@@ -128,7 +150,14 @@ export function BookSeat() {
       />
 
       <div className="mt-6 space-y-4">
-        <DateStrip days={days} value={date} onChange={(d) => { setDate(d); setSelected(null); }} />
+        <BusyNudge onPick={(d) => { setDate(d); setSelected(null); }} />
+        <DateStrip days={days} value={date} marks={dayMarks} onChange={(d) => { setDate(d); setSelected(null); }} />
+        {dayNotices.map((msg) => (
+          <p key={msg} className="flex items-center gap-2 rounded-2xl bg-spark-light/70 px-4 py-2.5 text-sm">
+            <SparkMark className="h-4 w-4 shrink-0 text-spark-dark" />
+            <span><b>{msg}</b> <span className="text-ink/60">— those seats can&apos;t be booked this day.</span></span>
+          </p>
+        ))}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="inline-flex rounded-full bg-ink/5 p-1">
             {PARTS.map((p) => (
@@ -191,7 +220,7 @@ export function BookSeat() {
               setSelected(null);
               loadMine();
               announceHoldChange();
-              if (b.status === "confirmed") setDone(b);
+              if (b.status === "confirmed") { setDone(b); buzz(); }
               else show("Payment received, but the seat was released before it completed. We'll refund you in full.", "error");
             }}
             onCancel={releaseHold}
