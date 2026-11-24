@@ -16,6 +16,7 @@ const grants = readFileSync(join(root, "supabase/migrations/0002_grants.sql"), "
 const m3 = readFileSync(join(root, "supabase/migrations/0003_hold_and_calendar.sql"), "utf8");
 const m4 = readFileSync(join(root, "supabase/migrations/0004_announcements.sql"), "utf8");
 const m5 = readFileSync(join(root, "supabase/migrations/0005_events_and_push.sql"), "utf8");
+const m7 = readFileSync(join(root, "supabase/migrations/0007_google_profiles.sql"), "utf8");
 const seed = readFileSync(join(root, "supabase/seed.sql"), "utf8");
 
 let passed = 0;
@@ -37,7 +38,7 @@ async function main() {
   await db.exec(`
     create role anon; create role authenticated; create role service_role;
     create schema auth;
-    create table auth.users (id uuid primary key, email text);
+    create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb not null default '{}');
     create function auth.uid() returns uuid language sql stable as $$
       select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
     grant usage on schema auth to anon, authenticated;
@@ -48,6 +49,7 @@ async function main() {
   await db.exec(m3);
   await db.exec(m4);
   await db.exec(m5);
+  await db.exec(m7);
 
   const as = async (uid: string | null) => {
     await db.query(`select set_config('request.jwt.claim.sub', $1, false)`, [uid ?? ""]);
@@ -101,7 +103,22 @@ async function main() {
   const fixed = await user("fixed@spark.test");
   await db.exec(`insert into public.memberships (email, plan_id, assigned_seat_id) values ('fixed@spark.test', 'fixed', 'D-31')`);
 
-  console.log("Seed & roles");
+  console.log("Google sign-in profiles");
+  const gId = randomUUID();
+  await db.query(`insert into public.memberships (email, plan_id) values ('asha@spark.test', 'flexi')`);
+  await db.query(
+    `insert into auth.users (id, email, raw_user_meta_data) values ($1, 'Asha@Spark.test', $2)`,
+    [gId, JSON.stringify({ full_name: "Asha Rao", avatar_url: "https://lh3.googleusercontent.com/a/x" })]);
+  const g = (await db.query<{ full_name: string; avatar_url: string; role: string }>(
+    `select full_name, avatar_url, role from public.profiles where id = $1`, [gId])).rows[0];
+  ok(g.full_name === "Asha Rao" && g.avatar_url.includes("googleusercontent"), "Google sign-up brings the name and photo");
+  ok(g.role === "member", "an invited member signing in with Google is recognised by email");
+  const eId = await user("later.google@spark.test");
+  await db.query(`update auth.users set raw_user_meta_data = $2 where id = $1`, [eId, JSON.stringify({ name: "Later Linker" })]);
+  const lg = (await db.query<{ full_name: string }>(`select full_name from public.profiles where id = $1`, [eId])).rows[0];
+  ok(lg.full_name === "Later Linker", "an email account that later links Google gets its name filled in");
+
+  console.log("\nSeed & roles");
   const counts = await db.query<{ desks: number; rooms: number }>(
     `select count(*) filter (where kind='desk')::int desks, count(*) filter (where kind='room')::int rooms from public.resources`,
   );

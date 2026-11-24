@@ -53,9 +53,14 @@ export function SiteHeader() {
                 onClick={() => setOpen((o) => !o)}
                 className="flex items-center gap-2 rounded-full border border-ink/15 py-1 pl-1 pr-3 text-sm hover:bg-ink/5"
               >
-                <span className="grid h-7 w-7 place-items-center rounded-full bg-spark text-xs font-semibold text-ink">
-                  {(profile?.full_name || user.email || "?").slice(0, 1).toUpperCase()}
-                </span>
+                {profile?.avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={profile.avatar_url} alt="" referrerPolicy="no-referrer" className="h-7 w-7 rounded-full object-cover ring-2 ring-spark" />
+                ) : (
+                  <span className="grid h-7 w-7 place-items-center rounded-full bg-spark text-xs font-semibold text-ink">
+                    {(profile?.full_name || user.email || "?").slice(0, 1).toUpperCase()}
+                  </span>
+                )}
                 <span className="hidden max-w-32 truncate sm:inline">{profile?.full_name || user.email}</span>
               </button>
               {open && (
