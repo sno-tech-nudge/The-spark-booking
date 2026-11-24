@@ -25,17 +25,26 @@ function loadRazorpay(): Promise<boolean> {
   });
 }
 
-/** Pays for a held seat. Collects (and saves) the visitor's details first. */
-export function Checkout({
+/** Anything on hold that can be paid for: a seat/room booking or an event ticket. */
+export type HeldItem = Pick<Booking, "id" | "amount" | "hold_expires_at"> & { part?: Booking["part"] };
+
+/** Pays for a held seat or event ticket. Collects (and saves) the visitor's details first. */
+export function Checkout<T extends HeldItem>({
   booking, gstRate, holdMinutes = 10, title, onPaid, onCancel,
+  kind = "booking", lineLabel, heldLabel = "Seat held for you", releaseLabel = "Release seat",
 }: {
-  booking: Booking;
+  booking: T;
   gstRate: number;
   holdMinutes?: number;
   title: string;
-  onPaid: (b: Booking) => void;
+  onPaid: (b: T) => void;
   onCancel: () => void;
+  kind?: "booking" | "rsvp";
+  lineLabel?: string;
+  heldLabel?: string;
+  releaseLabel?: string;
 }) {
+  const idField = kind === "rsvp" ? "rsvpId" : "bookingId";
   const { user, profile, refreshProfile } = useAuth();
   const [name, setName] = useState(profile?.full_name ?? "");
   const [phone, setPhone] = useState(profile?.phone ?? "");
@@ -65,7 +74,7 @@ export function Checkout({
       const res = await fetch("/api/pay/create", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ bookingId: booking.id }),
+        body: JSON.stringify({ [idField]: booking.id }),
       });
       const order = await res.json();
       if (!res.ok) throw new Error(order.error ?? "Could not start payment");
@@ -74,11 +83,11 @@ export function Checkout({
         const r = await fetch("/api/pay/demo", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ bookingId: booking.id }),
+          body: JSON.stringify({ [idField]: booking.id }),
         });
         const out = await r.json();
         if (!r.ok) throw new Error(out.error ?? "Payment failed");
-        onPaid(out.booking);
+        onPaid(out.booking ?? out.rsvp);
         return;
       }
 
@@ -96,7 +105,7 @@ export function Checkout({
           const r = await fetch("/api/pay/verify", {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ bookingId: booking.id, ...resp }),
+            body: JSON.stringify({ [idField]: booking.id, ...resp }),
           });
           const out = await r.json();
           if (!r.ok) {
@@ -104,7 +113,7 @@ export function Checkout({
             setBusy(false);
             return;
           }
-          onPaid(out.booking);
+          onPaid(out.booking ?? out.rsvp);
         },
         modal: { ondismiss: () => setBusy(false) },
       });
@@ -118,7 +127,7 @@ export function Checkout({
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-[11px] uppercase tracking-[0.12em] text-ink/55">Seat held for you</p>
+        <p className="text-[11px] uppercase tracking-[0.12em] text-ink/55">{heldLabel}</p>
         <p className="mt-1 text-lg font-medium">{title}</p>
       </div>
       <HoldTimer expiresAt={booking.hold_expires_at} totalMinutes={holdMinutes} />
@@ -145,13 +154,13 @@ export function Checkout({
             </div>
           </div>
           <dl className="space-y-1 text-sm">
-            <div className="flex justify-between"><dt className="text-ink/60">{booking.part === "full" ? "Day pass" : "Half-day pass"}</dt><dd>{inr(booking.amount)}</dd></div>
+            <div className="flex justify-between"><dt className="text-ink/60">{lineLabel ?? (booking.part === "full" ? "Day pass" : "Half-day pass")}</dt><dd>{inr(booking.amount)}</dd></div>
             <div className="flex justify-between"><dt className="text-ink/60">GST {gstRate}%</dt><dd>{inr(gst)}</dd></div>
             <div className="flex justify-between border-t border-ink/10 pt-2 font-semibold"><dt>Total</dt><dd>{inr(total)}</dd></div>
           </dl>
           {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
           <div className="flex gap-2">
-            <button className="btn-ghost" onClick={onCancel} disabled={busy}>Release seat</button>
+            <button className="btn-ghost" onClick={onCancel} disabled={busy}>{releaseLabel}</button>
             <button className="btn-spark flex-1" onClick={pay} disabled={busy}>
               {busy ? <><Spinner className="h-4 w-4 !text-ink" /> Processing…</> : `Pay ${inr(total)}`}
             </button>

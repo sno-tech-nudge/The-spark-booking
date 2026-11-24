@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
 import { SparkMark, Spinner, Wordmark } from "./brand";
 import { useAnnouncements, dateRange } from "./announcements";
+import { useEvents } from "./events";
+import { EventCover } from "./event-cover";
+import { evDay, evTime, spotsLeft } from "@/lib/events";
 import { useCatalog, useClock, useLiveOccupancy, useMounted } from "@/lib/hooks";
 import { closedOn } from "@/lib/announcements";
 import { publicOrigin } from "@/lib/site";
@@ -32,6 +35,7 @@ export function ReceptionScreen() {
   const { catalog } = useCatalog();
   const { occupancy, live } = useLiveOccupancy(today);
   const { announcements } = useAnnouncements();
+  const { events } = useEvents();
   const [qr, setQr] = useState<string>("");
   const [chrome, setChrome] = useState(true);
   const bookUrl = mounted ? `${publicOrigin()}/book` : "";
@@ -115,7 +119,9 @@ export function ReceptionScreen() {
   });
   const roomsFree = roomRows.filter((x) => x.status.tone === "free").length;
 
-  const notices = announcements.filter((a) => a.ends_on >= today).slice(0, 3);
+  const nextEvent = (events ?? []).find((e) => e.status === "published" && new Date(e.ends_at).getTime() > t);
+  const nextEventToday = nextEvent && new Date(nextEvent.starts_at).toLocaleDateString("en-CA", { timeZone: TZ }) === today;
+  const notices = announcements.filter((a) => a.ends_on >= today).slice(0, nextEvent ? 2 : 3);
 
   return (
     <div className="relative flex h-[100dvh] flex-col overflow-hidden bg-ink p-[2.5vmin] text-paper" style={{ cursor: chrome ? "default" : "none" }}>
@@ -186,6 +192,20 @@ export function ReceptionScreen() {
 
       {/* notices + scan to book */}
       <footer className="relative mt-[2vmin] flex shrink-0 items-center gap-[3vmin]">
+        {nextEvent && (
+          <div className="flex w-[34%] shrink-0 items-center gap-[1.8vmin] rounded-[2vmin] bg-paper/[0.07] p-[1.4vmin] ring-1 ring-paper/10">
+            <EventCover event={nextEvent} showTitle={false} className="h-[11vmin] w-[11vmin] shrink-0" rounded="rounded-[1.4vmin]" />
+            <div className="min-w-0">
+              <p className="uppercase tracking-[0.16em] text-spark text-[1.4vmin]">
+                {new Date(nextEvent.starts_at).getTime() <= t ? "Happening now" : nextEventToday ? `Today · ${evTime(nextEvent.starts_at)}` : `${evDay(nextEvent.starts_at)} · ${evTime(nextEvent.starts_at)}`}
+              </p>
+              <p className="truncate text-[2.4vmin]">{nextEvent.title}</p>
+              <p className="text-paper/50 text-[1.6vmin]">
+                {spotsLeft(nextEvent) ? `${nextEvent.going_count} going · ${spotsLeft(nextEvent)} spots left` : "Sold out · waitlist open"}
+              </p>
+            </div>
+          </div>
+        )}
         <div className="min-w-0 flex-1 space-y-[1vmin]">
           {notices.length ? notices.map((a) => (
             <p key={a.id} className="flex items-center gap-[1.5vmin] text-[2.4vmin]">

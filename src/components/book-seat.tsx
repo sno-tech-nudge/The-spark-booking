@@ -6,6 +6,7 @@ import { useAuth } from "./auth-provider";
 import { Checkout } from "./checkout";
 import { announceHoldChange } from "./hold-timer";
 import { AddToCalendar } from "./calendar-actions";
+import { PushNudge } from "./push-notifications";
 import { DateStrip, LiveBadge, Loader, Sheet, Toast, useToast } from "./ui";
 import { SeatLegend, SeatMap, seatStates } from "./seat-map";
 import { PageHeader, SparkMark, Spinner } from "./brand";
@@ -204,6 +205,7 @@ export function BookSeat() {
               <p className="mb-2 text-[11px] uppercase tracking-[0.12em] text-ink/55">Add to your calendar · get reminders</p>
               <AddToCalendar booking={done} resourceName={`Seat ${done.resource_id}`} />
             </div>
+            <PushNudge label="Remind me 15 min before" />
             <div className="flex gap-2">
               <button className="btn-ghost flex-1" onClick={() => setDone(null)}>Book another</button>
               <Link href="/me" className="btn-ink flex-1">My bookings</Link>

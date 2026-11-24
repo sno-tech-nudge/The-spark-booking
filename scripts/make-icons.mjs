@@ -24,4 +24,7 @@ for (const [file, size, scale, rounded] of out) {
   await sharp(Buffer.from(svg(size, scale, rounded))).png().toFile(file);
   console.log("wrote", file);
 }
+// Android status-bar badge: white asterisk on transparent
+await sharp(Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">${spokes(48, 38, 12, "#ffffff")}</svg>`)).png().toFile("public/icons/badge-96.png");
+console.log("wrote public/icons/badge-96.png");
 writeFileSync("public/icons/asterisk.svg", `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">${spokes(50, 41, 13, "#ffa927")}</svg>\n`);

@@ -7,6 +7,7 @@ import { DateStrip, LiveBadge, Loader, Sheet, Toast, useToast } from "./ui";
 import { NotConfigured } from "./book-seat";
 import { PageHeader, SparkMark, Spinner } from "./brand";
 import { AddToCalendar } from "./calendar-actions";
+import { PushNudge } from "./push-notifications";
 import { useCatalog, useLiveOccupancy, useMounted, useUsage } from "@/lib/hooks";
 import { useAnnouncements } from "./announcements";
 import { closedOn } from "@/lib/announcements";
@@ -240,6 +241,7 @@ export function BookRoom() {
               <p className="mb-2 text-[11px] uppercase tracking-[0.12em] text-ink/55">Add to your calendar · get reminders</p>
               <AddToCalendar booking={done} resourceName={rooms.find((r) => r.id === done.resource_id)?.name ?? done.resource_id} />
             </div>
+            <PushNudge label="Remind me 15 min before" />
             <div className="flex gap-2">
               <button className="btn-ghost flex-1" onClick={() => setDone(null)}>Book another</button>
               <Link href="/me" className="btn-ink flex-1">My bookings</Link>

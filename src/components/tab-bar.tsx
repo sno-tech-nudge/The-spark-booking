@@ -14,18 +14,18 @@ const Icon = ({ d }: { d: string }) => (
 const SEAT = "M6 11V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v5M4 11h16v4H4zM6 15v5M18 15v5";
 const ROOM = "M3 21h18M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16M14 12h.01";
 const ME = "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0";
-const ADMIN = "M4 6h16M4 12h16M4 18h10";
+const TICKET = "M3 8a2 2 0 0 0 0 4v0a2 2 0 0 1 0 4v1a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-1a2 2 0 0 1 0-4 2 2 0 0 1 0-4V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1zM14 6v12";
 
 /** Phone-style bottom navigation (mobile only), with the live asterisk in the middle. */
 export function TabBar() {
   const path = usePathname();
-  const { user, profile } = useAuth();
+  const { user } = useAuth(); // staff reach Admin from the header menu, keeping the bar to five tabs
   const tabs = [
     { href: "/book", label: "Seats", icon: <Icon d={SEAT} /> },
     { href: "/rooms", label: "Rooms", icon: <Icon d={ROOM} /> },
     { href: "/now", label: "Live", icon: <SparkMark className="h-6 w-6" />, center: true },
+    { href: "/events", label: "Events", icon: <Icon d={TICKET} /> },
     { href: user ? "/me" : "/login?next=/me", match: "/me", label: user ? "Mine" : "Sign in", icon: <Icon d={ME} /> },
-    ...(profile?.role === "admin" ? [{ href: "/admin", label: "Admin", icon: <Icon d={ADMIN} /> }] : []),
   ];
   return (
     <>

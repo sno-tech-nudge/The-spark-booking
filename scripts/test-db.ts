@@ -15,6 +15,7 @@ const migration = readFileSync(join(root, "supabase/migrations/0001_init.sql"), 
 const grants = readFileSync(join(root, "supabase/migrations/0002_grants.sql"), "utf8");
 const m3 = readFileSync(join(root, "supabase/migrations/0003_hold_and_calendar.sql"), "utf8");
 const m4 = readFileSync(join(root, "supabase/migrations/0004_announcements.sql"), "utf8");
+const m5 = readFileSync(join(root, "supabase/migrations/0005_events_and_push.sql"), "utf8");
 const seed = readFileSync(join(root, "supabase/seed.sql"), "utf8");
 
 let passed = 0;
@@ -46,6 +47,7 @@ async function main() {
   await db.exec(grants);
   await db.exec(m3);
   await db.exec(m4);
+  await db.exec(m5);
 
   const as = async (uid: string | null) => {
     await db.query(`select set_config('request.jwt.claim.sub', $1, false)`, [uid ?? ""]);
@@ -261,6 +263,77 @@ async function main() {
   await db.exec(`reset role`);
   ok(annErr.includes("row-level security"), "only staff can post announcements");
 
+  console.log("\nEvents, tickets & waitlist");
+  const mkEvent = async (slug: string, cap: number, memberPrice: number, guestPrice: number, status = "published") =>
+    (await db.query<{ id: string }>(
+      `insert into public.events (slug, title, host_name, starts_at, ends_at, capacity, member_price, guest_price, status)
+       values ($1, $1, 'Host', now() + interval '3 days', now() + interval '3 days 2 hours', $2, $3, $4, $5) returning id`,
+      [slug, cap, memberPrice, guestPrice, status])).rows[0].id;
+  const rsvp = (eid: string) => rpc(`select * from public.rsvp_event($1)`, [eid]);
+  const evCounts = async (eid: string) =>
+    (await db.query<{ g: number; w: number }>(`select going_count g, waitlist_count w from public.events where id = $1`, [eid])).rows[0];
+  const ev = await mkEvent("impact-101", 2, 0, 200);
+  await as(flexi);
+  r = await rsvp(ev);
+  ok(r.row?.status === "going" && r.row?.ticket_type === "member" && Number(r.row?.amount) === 0, "member RSVPs free (member price ₹0)");
+  const flexiRsvp = r.row?.id as string;
+  r = await rsvp(ev);
+  ok(r.row?.id === flexiRsvp, "RSVPing twice returns the same ticket");
+  await as(guest);
+  r = await rsvp(ev);
+  ok(r.row?.status === "held" && Number(r.row?.amount) === 200 && r.row?.ticket_type === "guest", "guest gets a 10-minute hold at the ₹200 guest price");
+  const guestRsvp = r.row?.id as string;
+  await as(guest2);
+  r = await rsvp(ev);
+  ok(r.row?.status === "waitlist", "event full → waitlist");
+  const g2Rsvp = r.row?.id as string;
+  let c = await evCounts(ev);
+  ok(c.g === 2 && c.w === 1, "live counters: 2 taken, 1 waiting");
+  await as(guest);
+  r = await rpc(`select * from public.cancel_rsvp($1)`, [guestRsvp]);
+  ok(r.row?.status === "cancelled", "guest gives up their spot");
+  const promoted = (await db.query<{ status: string; promoted_at: string | null }>(
+    `select status, promoted_at from public.event_rsvps where id = $1`, [g2Rsvp])).rows[0];
+  ok(promoted.status === "held" && promoted.promoted_at, "waitlist moves up: next guest gets a hold to pay");
+  await as(null);
+  r = await rpc(`select * from public.confirm_paid_rsvp($1, 'demo', 'o9', 'p9')`, [g2Rsvp]);
+  ok(r.row?.status === "going" && r.row?.billing === "paid", "paying confirms the ticket");
+  await as(limited);
+  r = await rsvp(ev);
+  ok(r.row?.status === "waitlist", "full again → member waits");
+  await as(flexi);
+  await rpc(`select * from public.cancel_rsvp($1)`, [flexiRsvp]);
+  const limitedRow = (await db.query<{ status: string }>(
+    `select status from public.event_rsvps where event_id = $1 and user_id = $2 and status <> 'cancelled'`, [ev, limited])).rows[0];
+  ok(limitedRow?.status === "going", "free member ticket is confirmed straight from the waitlist");
+  // expired holds release the spot
+  const ev2 = await mkEvent("paid-only", 1, 300, 300);
+  await as(guest);
+  const h = await rsvp(ev2);
+  await as(fixed);
+  r = await rsvp(ev2);
+  ok(r.row?.status === "waitlist", "1-seat paid event: second person waits");
+  await db.query(`update public.event_rsvps set hold_expires_at = now() - interval '1 minute' where id = $1`, [h.row?.id]);
+  await as(guest2);
+  r = await rsvp(ev2);
+  const fixedRow = (await db.query<{ status: string }>(
+    `select status from public.event_rsvps where event_id = $1 and user_id = $2`, [ev2, fixed])).rows[0];
+  ok(fixedRow.status === "held" && r.row?.status === "waitlist", "lapsed hold → first in line gets it, newcomer waits");
+  // a crowd of 40 for 5 spots
+  const ev3 = await mkEvent("crowd", 5, 0, 0);
+  for (let i = 0; i < 40; i++) {
+    const u = await user(`crowd${i}@spark.test`);
+    await as(u);
+    await rsvp(ev3);
+  }
+  c = await evCounts(ev3);
+  const real = (await db.query<{ n: number }>(
+    `select count(*)::int n from public.event_rsvps where event_id = $1 and status in ('going','held')`, [ev3])).rows[0].n;
+  ok(real === 5 && c.g === 5 && c.w === 35, "40 people, 5 spots → exactly 5 in, 35 on the waitlist");
+  await as(guest);
+  r = await rsvp(await mkEvent("draft-one", 10, 0, 0, "draft"));
+  ok(r.error?.includes("EVENT_UNAVAILABLE"), "drafts can't be booked");
+
   console.log("\nCalendar feed tokens");
   await as(flexi);
   const tok = async (reset: boolean) =>
@@ -302,6 +375,20 @@ async function main() {
     tokErr = (e as Error).message;
   }
   ok(tokErr.includes("permission denied"), "nobody can list other people's calendar tokens");
+  const others = await db.query<{ n: number }>(`select count(*)::int n from public.event_rsvps where user_id <> auth.uid()`);
+  ok(others.rows[0].n === 0, "people only see their own tickets");
+  await db.query(`insert into public.push_subscriptions (user_id, endpoint, p256dh, auth) values (auth.uid(), 'https://push.example/1', 'k', 'a')`);
+  let pushErr = "";
+  try {
+    await db.query(`insert into public.push_subscriptions (user_id, endpoint, p256dh, auth) values ($1, 'https://push.example/2', 'k', 'a')`, [guest]);
+  } catch (e) {
+    pushErr = (e as Error).message;
+  }
+  ok(pushErr.includes("row-level security"), "you can only register your own phone for notifications");
+  await db.exec(`reset role`);
+  await db.exec(`set role anon`);
+  const drafts = await db.query<{ n: number }>(`select count(*)::int n from public.events where status = 'draft'`);
+  ok(drafts.rows[0].n === 0, "the public never sees draft events");
   await db.exec(`reset role`);
 
   console.log(`\n${passed} passed, ${failed} failed`);

@@ -7,6 +7,7 @@ import { LiveBadge, Loader, Stat, Toast, useToast } from "./ui";
 import { NotConfigured } from "./book-seat";
 import { PageHeader, Spinner } from "./brand";
 import { NoticesTab } from "./admin-notices";
+import { EventsTab } from "./admin-events";
 import { SeatLegend, SeatMap, seatStates } from "./seat-map";
 import { useCatalog, useLiveOccupancy, useMounted } from "@/lib/hooks";
 import { supabaseBrowser, supabaseConfigured } from "@/lib/supabase/client";
@@ -21,7 +22,7 @@ type Membership = {
   profiles: Pick<Profile, "full_name" | "phone"> | null;
 };
 
-const TABS = ["Live", "Bookings", "Members", "Notices", "Pricing", "Reports"] as const;
+const TABS = ["Live", "Bookings", "Members", "Events", "Notices", "Pricing", "Reports"] as const;
 type Tab = (typeof TABS)[number];
 
 export function AdminConsole() {
@@ -66,6 +67,7 @@ export function AdminConsole() {
         {tab === "Pricing" && <PricingTab show={show} />}
         {tab === "Reports" && <ReportsTab />}
         {tab === "Notices" && <NoticesTab show={show} />}
+        {tab === "Events" && <EventsTab show={show} />}
       </div>
       <Toast toast={toast} />
     </div>

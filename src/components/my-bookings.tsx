@@ -9,6 +9,8 @@ import { PageHeader, Spinner } from "./brand";
 import { AddToCalendar, CalendarSync } from "./calendar-actions";
 import { OngoingTicket } from "./now-board";
 import { InstallCard } from "./pwa";
+import { PushCard } from "./push-notifications";
+import { MyTickets } from "./my-tickets";
 import { useCatalog, useMounted, useUsage } from "@/lib/hooks";
 import { supabaseBrowser, supabaseConfigured } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/errors";
@@ -107,7 +109,10 @@ export function MyBookings() {
         <ProfileCard onSaved={() => { refreshProfile(); show("Profile saved"); }} />
       </div>
 
-      <div className="mt-4 grid gap-4 md:grid-cols-2">
+      <MyTickets />
+
+      <div className="mt-4 grid gap-4 md:grid-cols-3">
+        <PushCard />
         <CalendarSync />
         <InstallCard />
       </div>

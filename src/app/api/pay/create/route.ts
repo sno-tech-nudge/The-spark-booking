@@ -1,23 +1,24 @@
 import { NextResponse } from "next/server";
 import Razorpay from "razorpay";
-import { gstRate, loadOwnHeldBooking, razorpayConfigured } from "@/lib/payments";
+import { gstRate, loadOwnPayable, razorpayConfigured, targetColumn } from "@/lib/payments";
 import { supabaseService } from "@/lib/supabase/server";
 
+// Starts payment for a held seat/room booking ({bookingId}) or event ticket ({rsvpId}).
 export async function POST(req: Request) {
-  const { bookingId } = await req.json().catch(() => ({}));
-  const res = await loadOwnHeldBooking(bookingId);
+  const body = await req.json().catch(() => ({}));
+  const res = await loadOwnPayable(body);
   if ("error" in res) return NextResponse.json({ error: res.error }, { status: res.status });
-  const { booking, user } = res;
+  const { payable, user } = res;
 
-  if (booking.status !== "held") {
-    return NextResponse.json({ error: "This seat is no longer on hold" }, { status: 409 });
+  if (payable.status !== "held") {
+    return NextResponse.json({ error: "This is no longer on hold" }, { status: 409 });
   }
-  if (booking.hold_expires_at && new Date(booking.hold_expires_at).getTime() < Date.now()) {
-    return NextResponse.json({ error: "Your hold expired — please pick the seat again" }, { status: 409 });
+  if (payable.hold_expires_at && new Date(payable.hold_expires_at).getTime() < Date.now()) {
+    return NextResponse.json({ error: "Your hold expired — please try again" }, { status: 409 });
   }
 
   const rate = await gstRate();
-  const total = booking.amount + Math.round((booking.amount * rate) / 100);
+  const total = payable.amount + Math.round((payable.amount * rate) / 100);
 
   if (!razorpayConfigured) {
     return NextResponse.json({ mode: "demo", amount: total });
@@ -27,16 +28,16 @@ export async function POST(req: Request) {
   const order = await rzp.orders.create({
     amount: total * 100,
     currency: "INR",
-    receipt: booking.id.slice(0, 40),
-    notes: { booking_id: booking.id, resource: booking.resource_id, date: booking.booking_date },
+    receipt: payable.id.slice(0, 40),
+    notes: payable.notes,
   });
   await supabaseService().from("payments").insert({
-    booking_id: booking.id,
+    ...targetColumn(payable),
     user_id: user.id,
     provider: "razorpay",
     order_id: order.id,
-    amount: booking.amount,
-    gst_amount: total - booking.amount,
+    amount: payable.amount,
+    gst_amount: total - payable.amount,
     status: "created",
   });
   return NextResponse.json({

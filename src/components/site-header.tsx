@@ -19,6 +19,7 @@ export function SiteHeader() {
   const links = [
     { href: "/book", label: "Book a seat" },
     { href: "/rooms", label: "Rooms" },
+    { href: "/events", label: "Events" },
     { href: "/now", label: "Live now" },
     ...(user ? [{ href: "/me", label: "My bookings" }] : []),
     ...(profile?.role === "admin" ? [{ href: "/admin", label: "Admin" }] : []),

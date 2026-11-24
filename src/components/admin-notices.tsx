@@ -52,7 +52,7 @@ export function NoticesTab({ show }: { show: ShowFn }) {
     if (form.ends_on < form.starts_on) return show("The end date is before the start date.", "error");
     setBusy(true);
     const { data: auth } = await supabaseBrowser().auth.getUser();
-    const { error } = await supabaseBrowser().from("announcements").insert({
+    const { data: created, error } = await supabaseBrowser().from("announcements").insert({
       message: form.message.trim(),
       starts_on: form.starts_on,
       ends_on: form.ends_on,
@@ -60,10 +60,16 @@ export function NoticesTab({ show }: { show: ShowFn }) {
       zone: form.closure === "zone" ? form.zone : null,
       resource_id: form.closure === "resource" ? form.resource_id || null : null,
       created_by: auth.user?.id,
-    });
+    }).select("id").single();
     setBusy(false);
     if (error) return show(error.message, "error");
-    show(form.closure === "none" ? "Notice posted — everyone sees it now" : "Posted — those dates are now blocked for booking");
+    let pushed = "";
+    try {
+      const r = await fetch("/api/push/notice", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ announcementId: created?.id }) });
+      const j = await r.json();
+      if (r.ok && j.people) pushed = ` · sent to ${j.people} phone${j.people === 1 ? "" : "s"}`;
+    } catch { /* notification is a bonus */ }
+    show((form.closure === "none" ? "Notice posted — everyone sees it now" : "Posted — those dates are now blocked for booking") + pushed);
     setForm({ ...form, message: "" });
     load();
     reload();

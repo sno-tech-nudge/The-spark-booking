@@ -1,8 +1,8 @@
 // the*spark service worker: makes the app installable and gives it an offline screen.
 // Bookings always come live from the network; only static files are cached.
-const VERSION = "spark-v1";
+const VERSION = "spark-v2";
 const OFFLINE_URL = "/offline";
-const PRECACHE = [OFFLINE_URL, "/icons/icon-192.png", "/icons/asterisk.svg"];
+const PRECACHE = [OFFLINE_URL, "/icons/icon-192.png", "/icons/badge-96.png", "/icons/asterisk.svg"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(VERSION).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
@@ -41,20 +41,36 @@ self.addEventListener("fetch", (event) => {
   }
 });
 
-// Ready for web push (phase 2): show a notification when the server sends one.
+// Web push: reminders, event updates and centre notices from the server.
 self.addEventListener("push", (event) => {
-  const data = event.data ? event.data.json() : {};
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch { data = { body: event.data && event.data.text() }; }
   event.waitUntil(
     self.registration.showNotification(data.title || "the*spark", {
       body: data.body || "",
       icon: "/icons/icon-192.png",
-      badge: "/icons/icon-192.png",
+      badge: "/icons/badge-96.png",   // monochrome asterisk for the Android status bar
+      tag: data.tag,
+      renotify: Boolean(data.tag),
+      vibrate: [35, 45, 70],
       data: { url: data.url || "/me" },
     }),
   );
 });
 
+// Tapping a notification opens (or focuses) the app on the right page.
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  event.waitUntil(self.clients.openWindow(event.notification.data?.url || "/me"));
+  const url = new URL(event.notification.data?.url || "/me", self.location.origin).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((wins) => {
+      for (const w of wins) {
+        if (new URL(w.url).origin === self.location.origin && "focus" in w) {
+          w.navigate(url);
+          return w.focus();
+        }
+      }
+      return self.clients.openWindow(url);
+    }),
+  );
 });

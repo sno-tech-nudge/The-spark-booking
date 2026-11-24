@@ -13,6 +13,7 @@ import { friendlyError } from "@/lib/errors";
 import { closedOn } from "@/lib/announcements";
 import { useAnnouncements } from "./announcements";
 import { BusyNudge, PullToRefresh } from "./nudges";
+import { EventRow, useEvents, useMyRsvps } from "./events";
 import { buzz } from "@/lib/haptics";
 import { PARTS, fmtDate, fmtHour, istHour, parseRange, todayIST } from "@/lib/time";
 import type { Booking, Occupancy, Resource } from "@/lib/types";
@@ -238,6 +239,8 @@ export function NowBoard() {
         </div>
       )}
 
+      <TodayEvents t={t} />
+
       {/* rooms, with a day timeline and a "now" line */}
       <div className="card relative mt-6 p-5">
         <CornerSpark />
@@ -297,6 +300,35 @@ function RoomNowRow({ room, occupancy, t, nowH, closedMsg }: { room: Resource; o
             <span className="absolute -top-1 left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-ink" />
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+/** Events today and next up (Live board). */
+function TodayEvents({ t }: { t: number }) {
+  const { events } = useEvents();
+  const { mine } = useMyRsvps();
+  const today = todayIST();
+  const upcoming = (events ?? []).filter((e) => e.status === "published" && new Date(e.ends_at).getTime() > t);
+  const todays = upcoming.filter((e) => new Date(e.starts_at).toLocaleDateString("en-CA", { timeZone: TZ }) === today);
+  const list = (todays.length ? todays : upcoming).slice(0, 3);
+  if (!list.length) return null;
+  const live = list.find((e) => new Date(e.starts_at).getTime() <= t);
+  return (
+    <div className="card relative mt-6 p-5">
+      <CornerSpark />
+      <div className="flex items-baseline justify-between gap-3 pr-8">
+        <p className="text-[11px] uppercase tracking-[0.12em] text-ink/55">{todays.length ? "Events today" : "Next events"}</p>
+        <Link href="/events" className="text-xs text-ink/55 underline">All events</Link>
+      </div>
+      {live && (
+        <p className="mt-3 inline-flex items-center gap-2 rounded-full bg-spark px-3 py-1 text-xs font-medium">
+          <span className="h-2 w-2 rounded-full bg-ink live-dot" /> Happening now: {live.title}
+        </p>
+      )}
+      <div className="mt-2 grid gap-1 sm:grid-cols-3">
+        {list.map((e) => <EventRow key={e.id} e={e} mine={mine.get(e.id)} />)}
       </div>
     </div>
   );

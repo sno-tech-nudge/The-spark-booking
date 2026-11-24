@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CornerSpark, Eyebrow, SparkMark, Wordmark } from "@/components/brand";
+import { HomeEvents } from "@/components/events";
 
 const PLANS = [
   { name: "Flexi Desk", price: "12,000", per: "/ member / month", points: ["Any free seat, full-time", "5 meeting-room hours a month", "Book seats & rooms in the app"], tone: "spark" },
@@ -72,6 +73,9 @@ export default function Home() {
           ))}
         </div>
       </section>
+
+      {/* Events — District-style strip */}
+      <HomeEvents />
 
       {/* Plans — box list cards */}
       <section className="border-y border-sand/70 bg-cream/50">

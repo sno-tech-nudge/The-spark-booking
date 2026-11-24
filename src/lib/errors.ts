@@ -18,7 +18,10 @@ const MESSAGES: Record<string, string> = {
   NOT_TODAY: "You can check in on the day of your booking.",
   NOT_CHECKED_IN: "Check in first.",
   HAS_BOOKINGS: "There are bookings on that day — cancel or move them first.",
-  NOT_FOUND: "Booking not found.",
+  NOT_FOUND: "Not found.",
+  EVENT_UNAVAILABLE: "This event isn't open for RSVPs.",
+  EVENT_STARTED: "This event has already started.",
+  RSVP_CLOSED: "RSVPs for this event have closed.",
 };
 
 export function friendlyError(raw: unknown): string {
