@@ -24,6 +24,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
           <div className="space-y-1 text-right">
             <p>ITPL Main Rd, Whitefield, Bengaluru</p>
             <p>Mon–Sat · 9am – 6pm · prices excl. GST</p>
+            <p className="space-x-3"><a className="hover:text-spark" href="/privacy">Privacy</a><a className="hover:text-spark" href="/terms">Terms</a></p>
             <p className="text-paper/35">Booking prototype v1</p>
           </div>
         </div>
