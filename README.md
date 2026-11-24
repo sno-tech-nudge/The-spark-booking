@@ -54,6 +54,20 @@ npm run test:race:api   # 24 signed-in people grab the same seat at once through
 npm run test:race       # same idea with hundreds of parallel DB sessions (needs DATABASE_URL)
 ```
 
+## Events & push notifications
+
+- **Events** (`/events`): staff publish in Admin → Events. Members get the member price, guests the guest price. Paid tickets are held for 10 minutes while people pay, and full events have a waitlist that promotes automatically. The database locks the event row on every RSVP, so it can never oversell.
+- **Push**: people switch notifications on in My bookings (on iPhone, add the app to the Home Screen first). Supabase `pg_cron` calls `/api/push/tick` every minute with `CRON_SECRET` and sends each reminder once:
+  - seat or room in 15 min
+  - 5 min left in a room
+  - event in 1 hour
+  - waitlist "you're in"
+  - event cancelled
+  - closures the evening before
+
+  Notices go out the moment staff post them.
+- Env vars: `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `CRON_SECRET` (generate keys with `npx web-push generate-vapid-keys`).
+
 ## Not in v1 yet
 
-Events and RSVPs, event-space booking, community board, invoices and Zoho Books, org/team plans, coupons, documents, waitlists, notifications, support tickets, Razorpay webhooks and refunds. Refunds are flagged in the data but processed manually.
+Event-space booking, community board, invoices and Zoho Books, org/team plans, coupons, documents, waitlists, notifications, support tickets, Razorpay webhooks and refunds. Refunds are flagged in the data but processed manually.
